@@ -1,0 +1,1 @@
+// Background script (currently empty but required)

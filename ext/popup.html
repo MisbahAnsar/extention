@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Filter Saver</title>
+  <style>
+    body {
+      width: 320px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+    }
+    button {
+      margin: 5px 0;
+      padding: 8px 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .filter-set {
+      border: 1px solid #e0e0e0;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 6px;
+      background: #f8f9fa;
+    }
+    .delete-btn {
+      background: #f44336;
+      margin-left: 8px;
+    }
+    #saveForm {
+      display: none;
+      margin: 12px 0;
+    }
+    #filterSetName {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .message {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #4caf50;
+    }
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #f44336;
+    }
+    .filter-info {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+    .filter-info small {
+      color: #666;
+    }
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h3 style="margin: 0 0 15px 0; color: #333;">Filter Saver</h3>
+  <button id="saveCurrent" style="width: 100%;">💾 Save Current Filters</button>
+  
+  <div id="saveForm">
+    <input type="text" id="filterSetName" placeholder="E.g.: 'Nike Running Shoes'">
+    <div class="button-group">
+      <button id="confirmSave">✅ Save</button>
+      <button id="cancelSave">❌ Cancel</button>
+    </div>
+  </div>
+  
+  <div id="messageContainer"></div>
+  <div id="savedFilters"></div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
