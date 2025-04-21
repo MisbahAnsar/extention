@@ -58,13 +58,208 @@ async function applyFilters(filters) {
   
   try {
     if (hostname.includes('myntra.com')) {
-      await applyMyntraFilters(filters);
+      await applyCrossSiteFilters(filters, 'myntra');
     } else if (hostname.includes('ajio.com')) {
-      await applyAjioFilters(filters);
+      await applyCrossSiteFilters(filters, 'ajio');
     }
   } catch (error) {
     console.error("Error in applyFilters:", error);
     throw error;
+  }
+}
+
+// Unified filter application that works across sites
+async function applyCrossSiteFilters(filters, site) {
+  console.log(`[Content Script] Applying cross-site filters to ${site}`);
+  
+  // First reset all filters
+  if (site === 'ajio') {
+    await resetAjioFilters();
+  } else if (site === 'myntra') {
+    await resetMyntraFilters();
+  }
+  
+  // Apply brand filters
+  if (filters.brands && filters.brands.length > 0) {
+    console.log("[Content Script] Applying brand filters:", filters.brands);
+    await applyBrandFilters(filters.brands, site);
+  }
+  
+  // Apply size filters
+  if (filters.sizes && filters.sizes.length > 0) {
+    console.log("[Content Script] Applying size filters:", filters.sizes);
+    await applySizeFilters(filters.sizes, site);
+  }
+  
+  // Apply color filters
+  if (filters.colors && filters.colors.length > 0) {
+    console.log("[Content Script] Applying color filters:", filters.colors);
+    await applyColorFilters(filters.colors, site);
+  }
+  
+  // Click apply button if needed (Ajio)
+  if (site === 'ajio') {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const applyButton = document.querySelector('.filter-apply-button');
+    if (applyButton) {
+      console.log("[Content Script] Clicking apply button");
+      applyButton.click();
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  }
+  
+  console.log("[Content Script] Filter application complete");
+}
+
+// Generic brand filter application
+async function applyBrandFilters(brands, site) {
+  for (const brand of brands) {
+    let brandName = typeof brand === 'string' ? brand : brand.text;
+    
+    if (site === 'myntra') {
+      const labels = document.querySelectorAll('.brand-list label');
+      for (const label of labels) {
+        const labelText = label.textContent
+          .replace(/\(\d+\)$/, '')
+          .trim();
+        
+        if (labelText.toLowerCase().includes(brandName.toLowerCase())) {
+          const checkbox = label.querySelector('input[type="checkbox"]');
+          if (checkbox && !checkbox.checked) {
+            checkbox.click();
+            await new Promise(resolve => setTimeout(resolve, 200));
+            break;
+          }
+        }
+      }
+    } 
+    else if (site === 'ajio') {
+      const inputs = document.querySelectorAll('input[name="brand"]');
+      for (const input of inputs) {
+        const label = input.closest('.facet-linkhead')?.querySelector('.facet-linkname');
+        if (label) {
+          const labelText = label.textContent
+            .replace(/\(\d+\)$/, '')
+            .trim();
+          
+          if (labelText.toLowerCase().includes(brandName.toLowerCase())) {
+            if (!input.checked) {
+              input.click();
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Generic size filter application
+async function applySizeFilters(sizes, site) {
+  for (const size of sizes) {
+    let sizeValue = typeof size === 'string' ? size : size.text;
+    
+    if (site === 'myntra') {
+      const sizeContainer = document.querySelector('.size-container');
+      if (sizeContainer) {
+        const labels = document.querySelectorAll('.size-list label');
+        for (const label of labels) {
+          const labelText = label.textContent
+            .replace(/\(\d+\)$/, '')
+            .trim();
+          
+          if (labelText.toLowerCase().includes(sizeValue.toLowerCase())) {
+            const checkbox = label.querySelector('input[type="checkbox"]');
+            if (checkbox && !checkbox.checked) {
+              checkbox.click();
+              await new Promise(resolve => setTimeout(resolve, 200));
+              break;
+            }
+          }
+        }
+      }
+    } 
+    else if (site === 'ajio') {
+      const inputs = document.querySelectorAll('input[name="verticalsizegroupformat"]');
+      for (const input of inputs) {
+        const label = input.closest('.facet-linkhead')?.querySelector('.facet-linkname');
+        if (label) {
+          const labelText = label.textContent
+            .replace(/\(\d+\)$/, '')
+            .trim();
+          
+          if (labelText.toLowerCase().includes(sizeValue.toLowerCase())) {
+            if (!input.checked) {
+              input.click();
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Generic color filter application
+async function applyColorFilters(colors, site) {
+  for (const color of colors) {
+    let colorValue = typeof color === 'string' ? color : color.text;
+    let colorSwatch = color.swatch;
+    
+    if (site === 'myntra') {
+      const labels = document.querySelectorAll('.colour-listItem label');
+      for (const label of labels) {
+        const labelText = label.textContent
+          .replace(/\(\d+\)$/, '')
+          .trim();
+        
+        if (labelText.toLowerCase().includes(colorValue.toLowerCase())) {
+          const checkbox = label.querySelector('input[type="checkbox"]');
+          if (checkbox && !checkbox.checked) {
+            checkbox.click();
+            await new Promise(resolve => setTimeout(resolve, 200));
+            break;
+          }
+        }
+      }
+    } 
+    else if (site === 'ajio') {
+      // Try to find by text first
+      let input = null;
+      const inputs = document.querySelectorAll('input[name="verticalcolorfamily"]');
+      
+      for (const colorInput of inputs) {
+        const label = colorInput.closest('.facet-linkhead')?.querySelector('.facet-linkname');
+        if (label) {
+          const labelText = label.textContent
+            .replace(/\(\d+\)$/, '')
+            .trim();
+          
+          if (labelText.toLowerCase().includes(colorValue.toLowerCase())) {
+            input = colorInput;
+            break;
+          }
+        }
+      }
+      
+      // If not found by text, try by swatch color
+      if (!input && colorSwatch) {
+        for (const colorInput of inputs) {
+          const swatch = colorInput.closest('.facet-linkhead')?.querySelector('.facet-checkbox-color-inner');
+          if (swatch?.style.backgroundColor === colorSwatch) {
+            input = colorInput;
+            break;
+          }
+        }
+      }
+      
+      if (input && !input.checked) {
+        input.click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
   }
 }
 
@@ -76,65 +271,66 @@ async function getMyntraFilters() {
     colors: []
   };
   
-  const brandCheckboxes = document.querySelectorAll('.brand-search .common-checkboxIndicator:checked');
+  // Get selected brands
+  const brandCheckboxes = document.querySelectorAll('.brand-list input[type="checkbox"]:checked');
   brandCheckboxes.forEach(checkbox => {
-    const brandName = checkbox.closest('label').textContent.trim();
+    const brandName = checkbox.parentElement.textContent
+      .replace(/\(\d+\)$/, '')
+      .trim();
     if (brandName) filters.brands.push(brandName);
   });
   
-  const sizeCheckboxes = document.querySelectorAll('.size-search .common-checkboxIndicator:checked');
-  sizeCheckboxes.forEach(checkbox => {
-    const size = checkbox.closest('label').textContent.trim();
-    if (size) filters.sizes.push(size);
-  });
+  // Get selected sizes (if size filter exists)
+  const sizeCheckboxes = document.querySelectorAll('.size-list input[type="checkbox"]:checked');
+  if (sizeCheckboxes.length > 0) {
+    sizeCheckboxes.forEach(checkbox => {
+      const size = checkbox.parentElement.textContent
+        .replace(/\(\d+\)$/, '')
+        .trim();
+      if (size) filters.sizes.push(size);
+    });
+  }
   
-  const colorCheckboxes = document.querySelectorAll('.color-search .common-checkboxIndicator:checked');
+  // Get selected colors
+  const colorCheckboxes = document.querySelectorAll('.colour-listItem input[type="checkbox"]:checked');
   colorCheckboxes.forEach(checkbox => {
-    const color = checkbox.closest('label').textContent.trim();
+    const color = checkbox.parentElement.textContent
+      .replace(/\(\d+\)$/, '')
+      .trim();
     if (color) filters.colors.push(color);
   });
   
   return filters;
 }
 
-async function applyMyntraFilters(filters) {
-  if (filters.brands && filters.brands.length > 0) {
-    const brandLabels = document.querySelectorAll('.brand-search label');
-    brandLabels.forEach(label => {
-      const brandName = label.textContent.trim();
-      if (filters.brands.includes(brandName)) {
-        const checkbox = label.querySelector('.common-checkboxIndicator');
-        if (checkbox && !checkbox.checked) {
-          label.click();
-        }
-      }
-    });
+async function resetMyntraFilters() {
+  console.log("[Content Script] Resetting Myntra filters...");
+  
+  // Reset brands
+  const brandCheckboxes = document.querySelectorAll('.brand-list input[type="checkbox"]:checked');
+  for (const checkbox of brandCheckboxes) {
+    if (checkbox.checked) {
+      checkbox.click();
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
   }
   
-  if (filters.sizes && filters.sizes.length > 0) {
-    const sizeLabels = document.querySelectorAll('.size-search label');
-    sizeLabels.forEach(label => {
-      const size = label.textContent.trim();
-      if (filters.sizes.includes(size)) {
-        const checkbox = label.querySelector('.common-checkboxIndicator');
-        if (checkbox && !checkbox.checked) {
-          label.click();
-        }
-      }
-    });
+  // Reset sizes (if exists)
+  const sizeCheckboxes = document.querySelectorAll('.size-list input[type="checkbox"]:checked');
+  for (const checkbox of sizeCheckboxes) {
+    if (checkbox.checked) {
+      checkbox.click();
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
   }
   
-  if (filters.colors && filters.colors.length > 0) {
-    const colorLabels = document.querySelectorAll('.color-search label');
-    colorLabels.forEach(label => {
-      const color = label.textContent.trim();
-      if (filters.colors.includes(color)) {
-        const checkbox = label.querySelector('.common-checkboxIndicator');
-        if (checkbox && !checkbox.checked) {
-          label.click();
-        }
-      }
-    });
+  // Reset colors
+  const colorCheckboxes = document.querySelectorAll('.colour-listItem input[type="checkbox"]:checked');
+  for (const checkbox of colorCheckboxes) {
+    if (checkbox.checked) {
+      checkbox.click();
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
   }
   
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -208,109 +404,8 @@ async function getAjioFilters() {
   return filters;
 }
 
-async function applyAjioFilters(filters) {
-  console.log("[Content Script] Starting filter application...");
-  
-  // Reset current filters first
-  await resetAjioFilters();
-  console.log("[Content Script] Reset complete");
-
-  // Function to expand filter section if needed
-  const expandFilterSection = async (sectionName) => {
-    const sectionHeaders = {
-      brand: 'brands',
-      size: 'size & fit',
-      color: 'colors'
-    };
-    
-    const headerText = sectionHeaders[sectionName];
-    if (!headerText) return;
-    
-    const header = Array.from(document.querySelectorAll('.facet-left-pane-label'))
-      .find(el => el.textContent.toLowerCase().includes(headerText.toLowerCase()));
-    
-    if (header) {
-      const parent = header.closest('.facet-head');
-      if (parent && !parent.classList.contains('facet-xpndicon')) {
-        console.log(`[Content Script] Expanding ${sectionName} section`);
-        parent.click();
-        await new Promise(resolve => setTimeout(resolve, 800)); // Wait for animation
-      }
-    }
-  };
-
-  // Apply filters in sequence with proper delays
-  if (filters.brands?.length > 0) {
-    await expandFilterSection('brand');
-    for (const brand of filters.brands) {
-      const input = document.querySelector(`input[name="brand"][value="${CSS.escape(brand.value)}"]`);
-      if (input && !input.checked) {
-        input.click();
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-  }
-
-  if (filters.sizes?.length > 0) {
-    await expandFilterSection('size');
-    for (const size of filters.sizes) {
-      const input = document.querySelector(`input[name="verticalsizegroupformat"][value="${CSS.escape(size.value)}"]`);
-      if (input && !input.checked) {
-        input.click();
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-  }
-
-  if (filters.colors?.length > 0) {
-    await expandFilterSection('color');
-    for (const color of filters.colors) {
-      // Try to find by exact value match first
-      let input = document.querySelector(`input[name="verticalcolorfamily"][value="${CSS.escape(color.value)}"]`);
-      
-      // If not found by value, try to find by swatch color
-      if (!input && color.swatch) {
-        const colorInputs = document.querySelectorAll('input[name="verticalcolorfamily"]');
-        for (const colorInput of colorInputs) {
-          const swatch = colorInput.closest('.facet-linkhead')?.querySelector('.facet-checkbox-color-inner');
-          if (swatch?.style.backgroundColor === color.swatch) {
-            input = colorInput;
-            break;
-          }
-        }
-      }
-      
-      if (input && !input.checked) {
-        input.click();
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-  }
-
-  // Final apply button click
-  console.log("[Content Script] Looking for apply button...");
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  let applyButton = document.querySelector('.filter-apply-button');
-  if (!applyButton) {
-    // Sometimes the button needs to be found again after DOM updates
-    applyButton = document.querySelector('.filter-apply-button');
-  }
-  
-  if (applyButton) {
-    console.log("[Content Script] Clicking apply button");
-    applyButton.click();
-    await new Promise(resolve => setTimeout(resolve, 1500));
-  } else {
-    console.log("[Content Script] No apply button found");
-  }
-  
-  console.log("[Content Script] Filter application complete");
-}
-
-// Reset all filters with verification
 async function resetAjioFilters() {
-  console.log("[Content Script] Resetting filters...");
+  console.log("[Content Script] Resetting Ajio filters...");
   
   const resetFilterType = async (selector) => {
     const checkboxes = document.querySelectorAll(`${selector}:checked`);
