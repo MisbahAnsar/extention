@@ -4,25 +4,30 @@
   <title>Filter Saver</title>
   <style>
     :root {
-      --primary-color: #4CAF50;
-      --danger-color: #f44336;
-      --text-color: #333;
-      --border-color: #e0e0e0;
-      --background-color: #f8f9fa;
-      --success-bg: #e8f5e9;
-      --error-bg: #ffebee;
-      --card-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      --card-shadow-hover: 0 4px 8px rgba(0,0,0,0.1);
+      --primary-color: #7C3AED;
+      --primary-gradient: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+      --danger-color: #EF4444;
+      --danger-gradient: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      --text-color: #E5E7EB;
+      --text-secondary: #9CA3AF;
+      --border-color: #374151;
+      --background-color: #111827;
+      --card-bg: #1F2937;
+      --success-bg: rgba(16, 185, 129, 0.1);
+      --error-bg: rgba(239, 68, 68, 0.1);
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
       --transition-speed: 0.2s;
     }
 
     body {
       width: 350px;
       padding: 15px;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
       color: var(--text-color);
-      background-color: white;
+      background-color: var(--background-color);
+      margin: 0;
     }
 
     h3 {
@@ -36,17 +41,16 @@
     }
 
     h3::before {
-      content: '🎯';
       font-size: 20px;
     }
 
     button {
       margin: 5px 0;
-      padding: 8px 16px;
-      background: var(--primary-color);
+      padding: 10px 16px;
+      background: var(--primary-gradient);
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 13px;
       font-weight: 500;
@@ -59,7 +63,6 @@
     }
 
     button:hover {
-      background: #45a049;
       transform: translateY(-1px);
       box-shadow: var(--card-shadow-hover);
     }
@@ -72,8 +75,8 @@
       border: 1px solid var(--border-color);
       padding: 15px;
       margin: 12px 0;
-      border-radius: 8px;
-      background: var(--background-color);
+      border-radius: 12px;
+      background: var(--card-bg);
       box-shadow: var(--card-shadow);
       transition: all var(--transition-speed) ease;
       position: relative;
@@ -87,13 +90,14 @@
       left: 0;
       width: 4px;
       height: 100%;
-      background: var(--primary-color);
+      background: var(--primary-gradient);
       opacity: 0;
       transition: opacity var(--transition-speed) ease;
     }
 
     .filter-set:hover {
       box-shadow: var(--card-shadow-hover);
+      transform: translateY(-1px);
     }
 
     .filter-set:hover::before {
@@ -101,20 +105,20 @@
     }
 
     .delete-btn {
-      background: var(--danger-color);
+      background: var(--danger-gradient);
       margin-left: 8px;
     }
 
     .delete-btn:hover {
-      background: #d32f2f;
+      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
     }
 
     #saveForm {
       display: none;
       margin: 15px 0;
       padding: 15px;
-      background: var(--background-color);
-      border-radius: 8px;
+      background: var(--card-bg);
+      border-radius: 12px;
       border: 1px solid var(--border-color);
       box-shadow: var(--card-shadow);
       animation: slideDown 0.3s ease;
@@ -133,26 +137,27 @@
 
     #filterSetName {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       margin: 8px 0;
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border-radius: 8px;
       box-sizing: border-box;
       font-size: 14px;
       transition: all var(--transition-speed) ease;
-      background: white;
+      background: var(--background-color);
+      color: var(--text-color);
     }
 
     #filterSetName:focus {
       outline: none;
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
     }
 
     .message {
       margin: 10px 0;
       padding: 12px;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 13px;
       font-weight: 500;
       animation: slideIn 0.3s ease;
@@ -174,14 +179,14 @@
 
     .success {
       background: var(--success-bg);
-      color: #2e7d32;
-      border-left: 4px solid var(--primary-color);
+      color: #10B981;
+      border-left: 4px solid #10B981;
     }
 
     .error {
       background: var(--error-bg);
-      color: #c62828;
-      border-left: 4px solid var(--danger-color);
+      color: #EF4444;
+      border-left: 4px solid #EF4444;
     }
 
     .filter-info {
@@ -198,7 +203,7 @@
     }
 
     .filter-info small {
-      color: #666;
+      color: var(--text-secondary);
       display: block;
       margin-top: 5px;
     }
@@ -212,22 +217,22 @@
 
     .site-indicator {
       display: inline-block;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 2px 8px;
+      border-radius: 6px;
       font-size: 11px;
       font-weight: 500;
       margin-left: 8px;
-      background: #e3f2fd;
-      color: #1976d2;
-      border: 1px solid rgba(25, 118, 210, 0.2);
+      background: rgba(124, 58, 237, 0.1);
+      color: #A78BFA;
+      border: 1px solid rgba(124, 58, 237, 0.2);
     }
 
     .empty-state {
       text-align: center;
       padding: 30px;
-      color: #666;
-      background: var(--background-color);
-      border-radius: 8px;
+      color: var(--text-secondary);
+      background: var(--card-bg);
+      border-radius: 12px;
       margin: 15px 0;
       border: 1px dashed var(--border-color);
     }
@@ -266,30 +271,135 @@
       content: '•';
       color: var(--primary-color);
     }
+
+    /* Filter selection styles */
+    .filter-checkbox-group {
+      margin: 12px 0;
+      padding: 15px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+    }
+
+    .filter-checkbox-group h4 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    .filter-checkbox-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .filter-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--background-color);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all var(--transition-speed) ease;
+    }
+
+    .filter-checkbox-item:hover {
+      background: rgba(124, 58, 237, 0.1);
+      border-color: var(--primary-color);
+      transform: translateY(-1px);
+    }
+
+    .filter-checkbox-item input[type="checkbox"] {
+      margin: 0;
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary-color);
+    }
+
+    .filter-checkbox-item label {
+      cursor: pointer;
+      font-size: 13px;
+      user-select: none;
+      color: var(--text-color);
+    }
+
+    .apply-selected-btn {
+      margin-top: 16px;
+      width: 100%;
+      background: var(--primary-gradient);
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-speed) ease;
+      font-size: 14px;
+    }
+
+    .apply-selected-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .apply-selected-btn:disabled {
+      background: var(--text-secondary);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
   </style>
 </head>
 <body>
   <h3>Filter Saver</h3>
   <button id="saveCurrent" style="width: 100%;">
-    <span>💾</span>
     Save Current Filters
   </button>
   
   <div id="saveForm">
     <input type="text" id="filterSetName" placeholder="Enter a name for your filter set...">
     <div class="button-group">
-      <button id="confirmSave">
-        <span>✅</span>
-        Save
-      </button>
-      <button id="cancelSave">
-        <span>❌</span>
-        Cancel
-      </button>
+      <button id="confirmSave">Save</button>
+      <button id="cancelSave">Cancel</button>
     </div>
   </div>
   
   <div id="messageContainer"></div>
+  
+  <div id="filterSelection" style="display: none;">
+    <div class="filter-checkbox-group">
+      <h4>Brands</h4>
+      <div id="brandCheckboxes" class="filter-checkbox-list"></div>
+    </div>
+    
+    <div class="filter-checkbox-group">
+      <h4>Sizes</h4>
+      <div id="sizeCheckboxes" class="filter-checkbox-list"></div>
+    </div>
+    
+    <div class="filter-checkbox-group">
+      <h4>Colors</h4>
+      <div id="colorCheckboxes" class="filter-checkbox-list"></div>
+    </div>
+    
+    <button id="applySelected" class="apply-selected-btn" disabled>
+      Apply Selected Filters
+    </button>
+  </div>
+  
   <div id="savedFilters"></div>
   
   <script src="popup.js"></script>

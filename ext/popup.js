@@ -182,7 +182,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
           console.log("[Popup] No compatible filters found");
           savedFiltersDiv.innerHTML = `
             <div class="empty-state">
-              <div class="emoji">🔍</div>
               <p>No saved filters found</p>
               <small>Save your current filters to get started!</small>
             </div>
@@ -225,11 +224,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
           buttonGroup.className = 'button-group';
           
           const applyBtn = document.createElement('button');
-          applyBtn.textContent = '▶️ Apply';
-          applyBtn.addEventListener('click', () => applyFilterSet(filterSet));
+          applyBtn.textContent = 'Apply';
+          applyBtn.addEventListener('click', () => showFilterSelection(filterSet));
           
           const deleteBtn = document.createElement('button');
-          deleteBtn.textContent = '🗑️ Delete';
+          deleteBtn.textContent = 'Delete';
           deleteBtn.className = 'delete-btn';
           deleteBtn.addEventListener('click', () => deleteFilterSet(filterSet.originSite, filterSet.id));
           
@@ -243,7 +242,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         console.error("[Popup] Error loading saved filters:", error);
         savedFiltersDiv.innerHTML = `
           <div class="empty-state error">
-            <div class="emoji">⚠️</div>
+            <div class="emoji"></div>
             <p>Error loading saved filters</p>
             <small>${error.message}</small>
           </div>
@@ -256,19 +255,112 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       return hostname.includes('ajio.com') || hostname.includes('myntra.com');
     }
     
-    // Apply a filter set
-    async function applyFilterSet(filterSet) {
-      console.log("[Popup] Starting to apply filter set:", filterSet.name);
-      console.log("[Popup] Filter set details:", {
-        brands: filterSet.filters.brands,
-        sizes: filterSet.filters.sizes,
-        colors: filterSet.filters.colors,
-        originSite: filterSet.originSite
+    // New function to show filter selection UI
+    function showFilterSelection(filterSet) {
+      const filterSelection = document.getElementById('filterSelection');
+      const brandCheckboxes = document.getElementById('brandCheckboxes');
+      const sizeCheckboxes = document.getElementById('sizeCheckboxes');
+      const colorCheckboxes = document.getElementById('colorCheckboxes');
+      const applySelectedBtn = document.getElementById('applySelected');
+      
+      // Clear previous checkboxes
+      brandCheckboxes.innerHTML = '';
+      sizeCheckboxes.innerHTML = '';
+      colorCheckboxes.innerHTML = '';
+      
+      // Add brand checkboxes
+      if (filterSet.filters.brands && filterSet.filters.brands.length > 0) {
+        filterSet.filters.brands.forEach(brand => {
+          const brandName = typeof brand === 'string' ? brand : brand.text;
+          const checkboxDiv = createCheckboxItem(brandName);
+          brandCheckboxes.appendChild(checkboxDiv);
+        });
+      }
+      
+      // Add size checkboxes
+      if (filterSet.filters.sizes && filterSet.filters.sizes.length > 0) {
+        filterSet.filters.sizes.forEach(size => {
+          const sizeValue = typeof size === 'string' ? size : size.text;
+          const checkboxDiv = createCheckboxItem(sizeValue);
+          sizeCheckboxes.appendChild(checkboxDiv);
+        });
+      }
+      
+      // Add color checkboxes
+      if (filterSet.filters.colors && filterSet.filters.colors.length > 0) {
+        filterSet.filters.colors.forEach(color => {
+          const colorValue = typeof color === 'string' ? color : color.text;
+          const checkboxDiv = createCheckboxItem(colorValue);
+          colorCheckboxes.appendChild(checkboxDiv);
+        });
+      }
+      
+      // Show filter selection UI
+      filterSelection.style.display = 'block';
+      
+      // Update apply button state
+      updateApplyButtonState();
+      
+      // Add event listeners for checkboxes
+      document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', updateApplyButtonState);
       });
-
+      
+      // Add event listener for apply button
+      applySelectedBtn.onclick = () => applySelectedFilters(filterSet);
+    }
+    
+    // Helper function to create checkbox item
+    function createCheckboxItem(value) {
+      const div = document.createElement('div');
+      div.className = 'filter-checkbox-item';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `filter-${value}`;
+      checkbox.value = value;
+      
+      const label = document.createElement('label');
+      label.htmlFor = `filter-${value}`;
+      label.textContent = value;
+      
+      div.appendChild(checkbox);
+      div.appendChild(label);
+      return div;
+    }
+    
+    // Helper function to update apply button state
+    function updateApplyButtonState() {
+      const applySelectedBtn = document.getElementById('applySelected');
+      const hasSelectedFilters = document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]:checked').length > 0;
+      applySelectedBtn.disabled = !hasSelectedFilters;
+    }
+    
+    // Function to apply selected filters
+    async function applySelectedFilters(filterSet) {
+      const selectedFilters = {
+        brands: [],
+        sizes: [],
+        colors: []
+      };
+      
+      // Get selected brands
+      document.querySelectorAll('#brandCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedFilters.brands.push(checkbox.value);
+      });
+      
+      // Get selected sizes
+      document.querySelectorAll('#sizeCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedFilters.sizes.push(checkbox.value);
+      });
+      
+      // Get selected colors
+      document.querySelectorAll('#colorCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
+        selectedFilters.colors.push(checkbox.value);
+      });
+      
       try {
         const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-        console.log("[Popup] Current tab URL:", tab.url);
         
         if (!isCompatibleSite(new URL(tab.url).hostname)) {
           throw new Error('Please navigate to Ajio or Myntra first');
@@ -277,29 +369,18 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         // Ensure content script connection before applying filters
         await ensureContentScriptConnection();
 
-        // Retry applying filters if needed
-        const response = await retryOperation(async () => {
-          console.log("[Popup] Sending applyFilters message to content script");
-          const response = await chrome.tabs.sendMessage(tab.id, {
-            action: "applyFilters",
-            filters: filterSet.filters
-          });
-          
-          console.log("[Popup] Received response from content script:", response);
-          
-          if (chrome.runtime.lastError) {
-            console.error("[Popup] Runtime error:", chrome.runtime.lastError);
-            throw new Error(chrome.runtime.lastError);
-          }
-          
-          if (!response || !response.success) {
-            throw new Error('Failed to apply filters. Please try again.');
-          }
-          
-          return response;
-        }, 3, 1000);
+        // Apply selected filters
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          action: "applyFilters",
+          filters: selectedFilters
+        });
         
-        showMessage(`"${filterSet.name}" applied successfully!`);
+        if (!response || !response.success) {
+          throw new Error('Failed to apply filters. Please try again.');
+        }
+        
+        showMessage(`Selected filters from "${filterSet.name}" applied successfully!`);
+        document.getElementById('filterSelection').style.display = 'none';
         window.close(); // Close popup after successful apply
       } catch (error) {
         console.error("[Popup] Error applying filters:", error);
