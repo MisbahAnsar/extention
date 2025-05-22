@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "E-Commerce Filter Saver",
     "version": "1.0",
-    "description": "Save and reapply your favorite filters on Myntra and Ajio",
+    "description": "Save and reapply your favorite filters on Myntra, Ajio, Amazon, Flipkart, and Snapdeal",
     "action": {
       "default_popup": "popup.html",
       "default_icon": {
@@ -14,14 +14,17 @@
     "permissions": ["storage", "activeTab", "scripting"],
     "host_permissions": [
       "*://*.myntra.com/*",
-      "*://*.ajio.com/*"
+      "*://*.ajio.com/*",
+      "*://*.amazon.in/*",
+      "*://*.flipkart.com/*",
+      "*://*.nykaa.com/*"
     ],
     "background": {
       "service_worker": "background.js"
     },
     "content_scripts": [
       {
-        "matches": ["*://*.myntra.com/*", "*://*.ajio.com/*"],
+        "matches": ["*://*.myntra.com/*", "*://*.ajio.com/*", "*://*.amazon.in/*", "*://*.flipkart.com/*", "*://*.nykaa.com/*"],
         "js": ["contentScript.js"],
         "run_at": "document_end"
       }

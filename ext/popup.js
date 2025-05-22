@@ -3,8 +3,10 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
   const tab = tabs[0];
   const url = new URL(tab.url);
 
-  if (!url.hostname.includes('ajio.com') && !url.hostname.includes('myntra.com')) {
-    showMessage("This extension only works on AJIO or Myntra.", true);
+  if (!url.hostname.includes('ajio.com') && !url.hostname.includes('myntra.com') && 
+      !url.hostname.includes('amazon.in') && !url.hostname.includes('flipkart.com') &&
+      !url.hostname.includes('nykaa.com')) {
+    showMessage("This extension only works on AJIO, Myntra, Amazon, Flipkart, or Nykaa.", true);
     return;
   }
 
@@ -16,6 +18,40 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     const confirmSaveBtn = document.getElementById('confirmSave');
     const cancelSaveBtn = document.getElementById('cancelSave');
     const messageContainer = document.getElementById('messageContainer');
+    
+    // Theme toggle logic
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const body = document.body;
+
+    function setTheme(mode) {
+      if (mode === 'light') {
+        body.classList.add('light-mode');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      } else {
+        body.classList.remove('light-mode');
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+      }
+      localStorage.setItem('theme', mode);
+    }
+
+    // Load theme preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      setTheme('light');
+    } else {
+      setTheme('dark');
+    }
+
+    themeToggle.addEventListener('click', function() {
+      if (body.classList.contains('light-mode')) {
+        setTheme('dark');
+      } else {
+        setTheme('light');
+      }
+    });
     
     // Show save form when save button is clicked
     saveCurrentBtn.addEventListener('click', function() {
@@ -252,10 +288,12 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     
     // Check if a hostname is compatible with our extension
     function isCompatibleSite(hostname) {
-      return hostname.includes('ajio.com') || hostname.includes('myntra.com');
+      return hostname.includes('ajio.com') || hostname.includes('myntra.com') || 
+             hostname.includes('amazon.in') || hostname.includes('flipkart.com') ||
+             hostname.includes('nykaa.com') || hostname.includes('nykaa.com');
     }
     
-    // New function to show filter selection UI
+    // Function to show filter selection UI
     function showFilterSelection(filterSet) {
       const filterSelection = document.getElementById('filterSelection');
       const brandCheckboxes = document.getElementById('brandCheckboxes');
@@ -305,7 +343,50 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', updateApplyButtonState);
       });
-      
+
+      // Add event listeners for select all checkboxes
+      const selectAllFilters = document.getElementById('selectAllFilters');
+      const selectAllBrands = document.getElementById('selectAllBrands');
+      const selectAllSizes = document.getElementById('selectAllSizes');
+      const selectAllColors = document.getElementById('selectAllColors');
+
+      // Handle main "Select All" checkbox
+      selectAllFilters.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        // Update all individual checkboxes
+        selectAllBrands.checked = isChecked;
+        selectAllSizes.checked = isChecked;
+        selectAllColors.checked = isChecked;
+        
+        // Update all filter checkboxes
+        document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]').forEach(checkbox => {
+          checkbox.checked = isChecked;
+        });
+        updateApplyButtonState();
+      });
+
+      // Handle individual group checkboxes
+      selectAllBrands.addEventListener('change', (e) => {
+        const checkboxes = brandCheckboxes.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => checkbox.checked = e.target.checked);
+        updateSelectAllState();
+        updateApplyButtonState();
+      });
+
+      selectAllSizes.addEventListener('change', (e) => {
+        const checkboxes = sizeCheckboxes.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => checkbox.checked = e.target.checked);
+        updateSelectAllState();
+        updateApplyButtonState();
+      });
+
+      selectAllColors.addEventListener('change', (e) => {
+        const checkboxes = colorCheckboxes.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => checkbox.checked = e.target.checked);
+        updateSelectAllState();
+        updateApplyButtonState();
+      });
+
       // Add event listener for apply button
       applySelectedBtn.onclick = () => applySelectedFilters(filterSet);
     }
@@ -336,6 +417,15 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       applySelectedBtn.disabled = !hasSelectedFilters;
     }
     
+    // Helper function to update the main "Select All" checkbox state
+    function updateSelectAllState() {
+      const selectAllFilters = document.getElementById('selectAllFilters');
+      const allCheckboxes = document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]');
+      const checkedCheckboxes = document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]:checked');
+      
+      selectAllFilters.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+    }
+    
     // Function to apply selected filters
     async function applySelectedFilters(filterSet) {
       const selectedFilters = {
@@ -363,20 +453,89 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
         
         if (!isCompatibleSite(new URL(tab.url).hostname)) {
-          throw new Error('Please navigate to Ajio or Myntra first');
+          throw new Error('Please navigate to Ajio, Myntra, Amazon, Flipkart, or Nykaa first');
         }
 
-        // Ensure content script connection before applying filters
-        await ensureContentScriptConnection();
+        // Add origin site information
+        selectedFilters.originSite = filterSet.originSite;
 
-        // Apply selected filters
-        const response = await chrome.tabs.sendMessage(tab.id, {
-          action: "applyFilters",
-          filters: selectedFilters
+        // For Amazon, reload the page first to avoid back/forward cache issues
+        if (tab.url.includes('amazon.in')) {
+          await chrome.tabs.reload(tab.id);
+          // Wait for page to load
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+
+        // Ensure content script is injected
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['contentScript.js']
+          });
+        } catch (error) {
+          console.log("[Popup] Content script already injected");
+        }
+
+        // Wait longer for content script to be ready
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Ensure content script connection with retries
+        let connected = false;
+        for (let i = 0; i < 3; i++) {
+          try {
+            await ensureContentScriptConnection();
+            connected = true;
+            break;
+          } catch (error) {
+            console.log(`[Popup] Connection attempt ${i + 1} failed:`, error);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        if (!connected) {
+          throw new Error('Could not establish connection with the page. Please try refreshing.');
+        }
+
+        // For all sites, wait longer for the page to be fully loaded
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Set up a timeout promise
+        const timeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Operation timed out')), 30000); // 30 second timeout
         });
-        
+
+        // Apply selected filters with timeout and retries
+        const applyPromise = new Promise(async (resolve, reject) => {
+          let lastError;
+          for (let i = 0; i < 3; i++) {
+            try {
+              const response = await chrome.tabs.sendMessage(tab.id, {
+                action: "applyFilters",
+                filters: selectedFilters
+              });
+              resolve(response);
+              return;
+            } catch (error) {
+              console.log(`[Popup] Apply attempt ${i + 1} failed:`, error);
+              lastError = error;
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          reject(lastError || new Error('Failed to apply filters after retries'));
+        });
+
+        // Wait for either the apply operation to complete or timeout
+        const response = await Promise.race([applyPromise, timeout]);
+
         if (!response || !response.success) {
-          throw new Error('Failed to apply filters. Please try again.');
+          // If we have a partial success, show a different message
+          if (response?.partialSuccess) {
+            showMessage('Some filters were applied successfully, but not all. Please check the results.', false);
+            document.getElementById('filterSelection').style.display = 'none';
+            window.close();
+            return;
+          }
+          throw new Error(response?.error || 'Failed to apply filters. Please try again.');
         }
         
         showMessage(`Selected filters from "${filterSet.name}" applied successfully!`);
@@ -423,6 +582,18 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     
     // Load saved filters when popup opens
     loadSavedFilters();
+
+    // Ensure all checkboxes in filter selection modal use .modern-checkbox
+    function updateCheckboxStyles() {
+      const allCheckboxes = document.querySelectorAll('#filterSelection input[type="checkbox"]');
+      allCheckboxes.forEach(cb => {
+        cb.classList.add('modern-checkbox');
+      });
+    }
+    // Call after rendering modal
+    const observer = new MutationObserver(updateCheckboxStyles);
+    observer.observe(document.getElementById('filterSelection'), { childList: true, subtree: true });
+    updateCheckboxStyles();
   });
 });
 
