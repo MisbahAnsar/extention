@@ -1,0 +1,16 @@
+{
+  "name": "extention",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild ext/contentScript.js --bundle --outfile=ext/dist/contentScript.js --format=esm"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "esbuild": "^0.25.4"
+  }
+}

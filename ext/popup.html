@@ -1,714 +1,147 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Filter Saver</title>
-  <!-- Feather Icons CDN for modern icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather-sprite.svg">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    :root {
-      --primary-color: #7C3AED;
-      --primary-gradient: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
-      --danger-color: #EF4444;
-      --danger-gradient: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-      --text-color: #E5E7EB;
-      --text-secondary: #9CA3AF;
-      --border-color: #374151;
-      --background-color: #111827;
-      --card-bg: #1F2937;
-      --success-bg: rgba(16, 185, 129, 0.1);
-      --error-bg: rgba(239, 68, 68, 0.1);
-      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      --transition-speed: 0.2s;
-      --checkbox-bg: #23272f;
-      --checkbox-border: #6D28D9;
-      --checkbox-checked: #7C3AED;
-      --modal-bg: #181C23;
-    }
-    body.light-mode {
-      --primary-color: #7C3AED;
-      --primary-gradient: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
-      --danger-color: #EF4444;
-      --danger-gradient: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-      --text-color: #23272f;
-      --text-secondary: #6B7280;
-      --border-color: #E5E7EB;
-      --background-color: #F3F4F6;
-      --card-bg: #fff;
-      --success-bg: rgba(16, 185, 129, 0.08);
-      --error-bg: rgba(239, 68, 68, 0.08);
-      --checkbox-bg: #fff;
-      --checkbox-border: #7C3AED;
-      --checkbox-checked: #7C3AED;
-      --modal-bg: #fff;
-    }
+  <head>
+    <title>Filter Saver</title>
+    <!-- Feather Icons CDN for modern icons -->
+    <!-- <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather-sprite.svg"
+    /> -->
+    <link rel="stylesheet" href="./popup.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <img id="logo" class="logo" src="./images/logo.png" alt="Logo" />
+      <span class="title">Filter Saver</span>
+      <button id="themeToggle" class="icon-btn" title="Toggle dark/light mode">
+        <i id="themeIcon" class="fa-solid fa-moon"></i>
+      </button>
+    </div>
 
-    body {
-      width: 350px;
-      padding: 0;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      color: var(--text-color);
-      background-color: var(--background-color);
-      margin: 0;
-    }
-
-    .top-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 16px 8px 16px;
-      background: var(--background-color);
-    }
-
-    .logo {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      object-fit: contain;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .title {
-      flex: 1;
-      text-align: left;
-      font-size: 18px;
-      font-weight: 700;
-      margin-left: 12px;
-      color: var(--text-color);
-    }
-
-    .icon-btn {
-      background: none;
-      border: none;
-      color: var(--text-color);
-      font-size: 20px;
-      cursor: pointer;
-      padding: 6px;
-      border-radius: 50%;
-      transition: background 0.2s;
-    }
-
-    .icon-btn:hover {
-      background: rgba(124, 58, 237, 0.08);
-    }
-
-    .save-panel {
-      padding: 0 16px 8px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    #saveCurrent {
-      width: 100%;
-      margin: 0;
-    }
-
-    #saveForm {
-      display: none;
-      margin: 8px 0 0 0;
-      padding: 12px 0 0 0;
-      background: none;
-      border: none;
-      box-shadow: none;
-    }
-
-    .save-form-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--card-bg);
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border-color);
-      margin-bottom: 0;
-      flex-wrap: wrap;
-    }
-
-    #filterSetName {
-      flex: 1;
-      padding: 10px 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 14px;
-      background: var(--background-color);
-      color: var(--text-color);
-      margin: 0;
-      min-width: 0;
-    }
-
-    #confirmSave, #cancelSave {
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 13px;
-      margin: 0;
-      min-width: 80px;
-      box-sizing: border-box;
-    }
-
-    #cancelSave {
-      background: var(--danger-gradient);
-      color: #fff;
-    }
-
-    #cancelSave:hover {
-      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-    }
-
-    .search-sort-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 16px 8px 16px;
-    }
-
-    .search-input {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      background: var(--background-color);
-      color: var(--text-color);
-      font-size: 14px;
-    }
-
-    .sort-dropdown {
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      background: var(--card-bg);
-      color: var(--text-color);
-      font-size: 14px;
-    }
-
-    .saved-searches-bar {
-      padding: 0 16px 4px 16px;
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--primary-color);
-    }
-
-    .saved-filters-list {
-      padding: 0 16px 0 16px;
-      min-height: 40px;
-    }
-
-    .bottom-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 16px;
-      background: var(--background-color);
-      border-top: 1px solid var(--border-color);
-      position: sticky;
-      bottom: 0;
-      z-index: 10;
-    }
-
-    #saveSearchBtn, #clearAllSearchBtn {
-      flex: 1;
-      margin: 0;
-      padding: 10px 0;
-      border-radius: 8px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    #clearAllSearchBtn {
-      background: var(--danger-gradient);
-      color: #fff;
-    }
-
-    #clearAllSearchBtn:hover {
-      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-    }
-
-    h3 {
-      margin: 0 0 15px 0;
-      color: var(--text-color);
-      font-size: 18px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    h3::before {
-      font-size: 20px;
-    }
-
-    button {
-      margin: 5px 0;
-      padding: 10px 16px;
-      background: var(--primary-gradient);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      transition: all var(--transition-speed) ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      box-shadow: var(--card-shadow);
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--card-shadow-hover);
-    }
-
-    button:active {
-      transform: translateY(0);
-    }
-
-    .filter-set {
-      border: 1px solid var(--border-color);
-      padding: 15px;
-      margin: 12px 0;
-      border-radius: 12px;
-      background: var(--card-bg);
-      box-shadow: var(--card-shadow);
-      transition: all var(--transition-speed) ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .filter-set::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 4px;
-      height: 100%;
-      background: var(--primary-gradient);
-      opacity: 0;
-      transition: opacity var(--transition-speed) ease;
-    }
-
-    .filter-set:hover {
-      box-shadow: var(--card-shadow-hover);
-      transform: translateY(-1px);
-    }
-
-    .filter-set:hover::before {
-      opacity: 1;
-    }
-
-    .delete-btn {
-      background: var(--danger-gradient);
-      margin-left: 8px;
-    }
-
-    .delete-btn:hover {
-      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-    }
-
-    .message {
-      margin: 10px 0;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      animation: slideIn 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateY(-10px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
-    .success {
-      background: var(--success-bg);
-      color: #10B981;
-      border-left: 4px solid #10B981;
-    }
-
-    .error {
-      background: var(--error-bg);
-      color: #EF4444;
-      border-left: 4px solid #EF4444;
-    }
-
-    .filter-info {
-      margin: 8px 0;
-      line-height: 1.5;
-    }
-
-    .filter-info strong {
-      font-size: 15px;
-      color: var(--text-color);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .filter-info small {
-      color: var(--text-secondary);
-      display: block;
-      margin-top: 5px;
-    }
-
-    .button-group {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 12px;
-      gap: 8px;
-    }
-
-    .site-indicator {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 500;
-      margin-left: 8px;
-      background: rgba(124, 58, 237, 0.1);
-      color: #A78BFA;
-      border: 1px solid rgba(124, 58, 237, 0.2);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 30px;
-      color: var(--text-secondary);
-      background: var(--card-bg);
-      border-radius: 12px;
-      margin: 15px 0;
-      border: 1px dashed var(--border-color);
-    }
-
-    .empty-state p {
-      margin: 10px 0;
-      font-weight: 500;
-    }
-
-    .empty-state .emoji {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-
-    .empty-state.error {
-      background: var(--error-bg);
-      border-color: var(--danger-color);
-    }
-
-    .filter-details {
-      margin-top: 8px;
-      padding: 8px;
-      background: white;
-      border-radius: 4px;
-      border: 1px solid var(--border-color);
-    }
-
-    .filter-details div {
-      margin: 4px 0;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .filter-details div::before {
-      content: '•';
-      color: var(--primary-color);
-    }
-
-    /* Filter selection styles */
-    .filter-checkbox-group {
-      margin: 12px 0;
-      padding: 15px;
-      background: var(--card-bg);
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      box-shadow: var(--card-shadow);
-    }
-
-    .filter-checkbox-group h4 {
-      margin: 0 0 12px 0;
-      font-size: 14px;
-      color: var(--text-color);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 600;
-    }
-
-    .filter-checkbox-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .filter-checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      background: var(--background-color);
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      cursor: pointer;
-      transition: all var(--transition-speed) ease;
-    }
-
-    .filter-checkbox-item:hover {
-      background: rgba(124, 58, 237, 0.1);
-      border-color: var(--primary-color);
-      transform: translateY(-1px);
-    }
-
-    .filter-checkbox-item input[type="checkbox"] {
-      margin: 0;
-      cursor: pointer;
-      width: 16px;
-      height: 16px;
-      accent-color: var(--primary-color);
-    }
-
-    .filter-checkbox-item label {
-      cursor: pointer;
-      font-size: 13px;
-      user-select: none;
-      color: var(--text-color);
-    }
-
-    .apply-selected-btn {
-      margin-top: 16px;
-      width: 100%;
-      background: var(--primary-gradient);
-      color: white;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all var(--transition-speed) ease;
-      font-size: 14px;
-    }
-
-    .apply-selected-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--card-shadow-hover);
-    }
-
-    .apply-selected-btn:disabled {
-      background: var(--text-secondary);
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    /* Redesigned filter selection modal */
-    #filterSelection {
-      background: var(--modal-bg);
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-      border: 1px solid var(--border-color);
-      max-width: 95%;
-      margin: 0 auto;
-      padding: 24px 20px 20px 20px !important;
-      position: relative;
-    }
-    #filterSelection h3 {
-      margin-bottom: 18px;
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--primary-color);
-      justify-content: space-between;
-    }
-    .filter-checkbox-group {
-      margin: 0 0 18px 0;
-      padding: 18px 14px 10px 14px;
-      background: var(--card-bg);
-      border-radius: 14px;
-      border: 1px solid var(--border-color);
-      box-shadow: var(--card-shadow);
-    }
-    .filter-checkbox-group .filter-checkbox-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .filter-checkbox-group .filter-checkbox-header label {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-color);
-    }
-    .modern-checkbox {
-      appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 2px solid var(--checkbox-border);
-      background: var(--checkbox-bg);
-      outline: none;
-      cursor: pointer;
-      position: relative;
-      transition: border-color 0.2s, background 0.2s;
-      margin-left: 0.5em;
-      margin-right: 0.5em;
-      display: inline-block;
-      vertical-align: middle;
-    }
-    .modern-checkbox:checked {
-      background: var(--checkbox-checked);
-      border-color: var(--checkbox-checked);
-    }
-    .modern-checkbox:checked::after {
-      content: '';
-      display: block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #fff;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-    .filter-checkbox-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .filter-checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      background: var(--background-color);
-      border-radius: 10px;
-      border: 1.5px solid var(--border-color);
-      cursor: pointer;
-      transition: all var(--transition-speed) ease;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-color);
-      min-width: 90px;
-      min-height: 36px;
-    }
-    .filter-checkbox-item:hover {
-      background: rgba(124, 58, 237, 0.08);
-      border-color: var(--primary-color);
-      transform: translateY(-1px);
-    }
-    .filter-checkbox-item label {
-      cursor: pointer;
-      font-size: 14px;
-      user-select: none;
-      color: var(--text-color);
-      margin-left: 2px;
-    }
-  </style>
-</head>
-<body>
-  <!-- Top Bar -->
-  <div class="top-bar">
-    <img id="logo" class="logo" src="/images/logo.png" alt="Logo" />
-    <span class="title">Filter Saver</span>
-    <button id="themeToggle" class="icon-btn" title="Toggle dark/light mode">
-      <i id="themeIcon" class="fa-solid fa-moon"></i>
-    </button>
-  </div>
-
-  <!-- Save Button & Writing Panel -->
-  <div class="save-panel">
-    <button id="saveCurrent">
-      <i class="fa-solid fa-floppy-disk"></i> Save Current Filters
-    </button>
-    <div id="saveForm">
-      <div class="save-form-row">
-        <input type="text" id="filterSetName" placeholder="Enter a name for your filter set...">
-        <button id="confirmSave">Save</button>
-        <button id="cancelSave">Cancel</button>
+    <!-- Save Button & Writing Panel -->
+    <div class="save-panel">
+      <button id="saveCurrent">
+        <i class="fa-solid fa-floppy-disk"></i> Save Current Filters
+      </button>
+      <div id="saveForm">
+        <div class="save-form-row">
+          <input
+            type="text"
+            id="filterSetName"
+            placeholder="Enter a name for your filter set..."
+          />
+          <button id="confirmSave">Save</button>
+          <button id="cancelSave">Cancel</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Message Container -->
-  <div id="messageContainer"></div>
+    <!-- Message Container -->
+    <div id="messageContainer"></div>
 
-  <!-- Search & Sort Bar -->
-  <div class="search-sort-bar">
-    <input type="text" id="searchInput" class="search-input" placeholder="Search saved filters...">
-    <select id="sortDropdown" class="sort-dropdown">
-      <option value="newest">Newest</option>
-      <option value="oldest">Oldest</option>
-      <option value="name">Name (A-Z)</option>
-    </select>
-  </div>
-
-  <!-- Saved Searches Bar -->
-  <div class="saved-searches-bar">
-    Saved Searches
-  </div>
-
-  <!-- Saved Filters List -->
-  <div id="savedFilters" class="saved-filters-list"></div>
-
-  <!-- Filter Selection Modal (hidden by default) -->
-  <div id="filterSelection" style="display: none; padding: 16px;">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-      <h3 style="margin: 0;">Select Filters to Apply</h3>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <label style="font-size: 15px; font-weight: 600; color: var(--text-color); margin-right: 4px;">Select All</label>
-        <input type="checkbox" id="selectAllFilters" class="modern-checkbox" title="Select All Filters">
-      </div>
+    <!-- Search & Sort Bar -->
+    <div class="search-sort-bar">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        placeholder="Search saved filters..."
+      />
+      <select id="sortDropdown" class="sort-dropdown">
+        <option value="newest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="name">Name (A-Z)</option>
+      </select>
     </div>
-    <div class="filter-checkbox-group">
-      <div class="filter-checkbox-header">
-        <label>Brands</label>
-        <input type="checkbox" id="selectAllBrands" class="modern-checkbox" title="Select All Brands">
+
+    <!-- Saved Searches Bar -->
+    <div class="saved-searches-bar">Saved Searches</div>
+
+    <!-- Saved Filters List -->
+    <div id="savedFilters" class="saved-filters-list"></div>
+
+    <!-- Filter Selection Modal (hidden by default) -->
+    <div id="filterSelection" style="display: none; padding: 16px">
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 18px;
+        "
+      >
+        <h3 style="margin: 0">Select Filters to Apply</h3>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <label
+            style="
+              font-size: 15px;
+              font-weight: 600;
+              color: var(--text-color);
+              margin-right: 4px;
+            "
+            >Select All</label
+          >
+          <input
+            type="checkbox"
+            id="selectAllFilters"
+            class="modern-checkbox"
+            title="Select All Filters"
+          />
+        </div>
       </div>
-      <div id="brandCheckboxes" class="filter-checkbox-list"></div>
-      <div class="filter-checkbox-header">
-        <label>Sizes</label>
-        <input type="checkbox" id="selectAllSizes" class="modern-checkbox" title="Select All Sizes">
+      <div class="filter-checkbox-group">
+        <div class="filter-checkbox-header">
+          <label>Brands</label>
+          <input
+            type="checkbox"
+            id="selectAllBrands"
+            class="modern-checkbox"
+            title="Select All Brands"
+          />
+        </div>
+        <div id="brandCheckboxes" class="filter-checkbox-list"></div>
+        <div class="filter-checkbox-header">
+          <label>Sizes</label>
+          <input
+            type="checkbox"
+            id="selectAllSizes"
+            class="modern-checkbox"
+            title="Select All Sizes"
+          />
+        </div>
+        <div id="sizeCheckboxes" class="filter-checkbox-list"></div>
+        <div class="filter-checkbox-header">
+          <label>Colors</label>
+          <input
+            type="checkbox"
+            id="selectAllColors"
+            class="modern-checkbox"
+            title="Select All Colors"
+          />
+        </div>
+        <div id="colorCheckboxes" class="filter-checkbox-list"></div>
       </div>
-      <div id="sizeCheckboxes" class="filter-checkbox-list"></div>
-      <div class="filter-checkbox-header">
-        <label>Colors</label>
-        <input type="checkbox" id="selectAllColors" class="modern-checkbox" title="Select All Colors">
-      </div>
-      <div id="colorCheckboxes" class="filter-checkbox-list"></div>
+      <button id="applySelected" class="apply-selected-btn" disabled>
+        <i class="fa-solid fa-check"></i> Apply Selected Filters
+      </button>
+      <button id="closeSelection" style="margin-top: 8px">Cancel</button>
     </div>
-    <button id="applySelected" class="apply-selected-btn" disabled>
-      <i class="fa-solid fa-check"></i> Apply Selected Filters
-    </button>
-    <button id="closeSelection" style="margin-top:8px;">Cancel</button>
-  </div>
 
-  <!-- Bottom Bar -->
-  <div class="bottom-bar">
-    <button id="saveSearchBtn"><i class="fa-solid fa-floppy-disk"></i> Save Search</button>
-    <button id="clearAllSearchBtn" class="delete-btn"><i class="fa-solid fa-trash"></i> Clear All Search</button>
-  </div>
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+      <button id="saveSearchBtn">
+        <i class="fa-solid fa-floppy-disk"></i> Save Search
+      </button>
+      <button id="clearAllSearchBtn" class="delete-btn">
+        <i class="fa-solid fa-trash"></i> Clear All Search
+      </button>
+    </div>
 
-  <script src="popup.js"></script>
-</body>
+    <script src="popup.js"></script>
+  </body>
 </html>
