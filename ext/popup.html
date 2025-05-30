@@ -431,24 +431,117 @@
       color: var(--primary-color);
     }
 
-    /* Filter selection styles */
-    .filter-checkbox-group {
-      margin: 12px 0;
-      padding: 15px;
-      background: var(--card-bg);
-      border-radius: 12px;
+    /* Inline Filter Selection Modal Styles */
+    .inline-filter-selection {
+      background: var(--modal-bg);
       border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin: 16px 0;
+      padding: 20px;
       box-shadow: var(--card-shadow);
+      animation: slideInDown 0.3s ease-out;
+      position: relative;
     }
 
-    .filter-checkbox-group h4 {
-      margin: 0 0 12px 0;
-      font-size: 14px;
-      color: var(--text-color);
+    @keyframes slideInDown {
+      from {
+        transform: translateY(-10px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .filter-selection-header {
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .filter-selection-header h4 {
+      margin: 0;
+      font-size: 16px;
       font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .select-all-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .select-all-container label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-color);
+      margin: 0;
+      cursor: pointer;
+    }
+
+    /* Filter checkbox group styles */
+    .filter-checkbox-group {
+      margin: 0 0 16px 0;
+      padding: 16px;
+      background: var(--card-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .filter-checkbox-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .filter-checkbox-header label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-color);
+      margin: 0;
+    }
+
+    .modern-checkbox {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--checkbox-border);
+      background: var(--checkbox-bg);
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .modern-checkbox:hover {
+      border-color: var(--primary-color);
+    }
+
+    .modern-checkbox:checked {
+      background: var(--checkbox-checked);
+      border-color: var(--checkbox-checked);
+    }
+
+    .modern-checkbox:checked::after {
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      line-height: 1;
     }
 
     .filter-checkbox-list {
@@ -456,6 +549,23 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 8px;
+      max-height: 100px;
+      overflow-y: auto;
+      padding: 2px;
+    }
+
+    .filter-checkbox-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .filter-checkbox-list::-webkit-scrollbar-track {
+      background: var(--background-color);
+      border-radius: 2px;
+    }
+
+    .filter-checkbox-list::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
     }
 
     .filter-checkbox-item {
@@ -464,24 +574,18 @@
       gap: 6px;
       padding: 8px 12px;
       background: var(--background-color);
-      border-radius: 8px;
+      border-radius: 6px;
       border: 1px solid var(--border-color);
       cursor: pointer;
       transition: all var(--transition-speed) ease;
+      font-size: 13px;
+      color: var(--text-color);
+      min-height: 32px;
     }
 
     .filter-checkbox-item:hover {
-      background: rgba(124, 58, 237, 0.1);
+      background: rgba(124, 58, 237, 0.05);
       border-color: var(--primary-color);
-      transform: translateY(-1px);
-    }
-
-    .filter-checkbox-item input[type="checkbox"] {
-      margin: 0;
-      cursor: pointer;
-      width: 16px;
-      height: 16px;
-      accent-color: var(--primary-color);
     }
 
     .filter-checkbox-item label {
@@ -489,29 +593,38 @@
       font-size: 13px;
       user-select: none;
       color: var(--text-color);
+      margin: 0;
+      flex: 1;
+    }
+
+    .filter-selection-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
     }
 
     .apply-selected-btn {
-      margin-top: 16px;
-      width: 100%;
+      flex: 2;
       background: var(--primary-gradient);
       color: white;
-      padding: 12px;
+      padding: 10px 16px;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
       font-weight: 500;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       transition: all var(--transition-speed) ease;
       font-size: 14px;
     }
 
-    .apply-selected-btn:hover {
+    .apply-selected-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: var(--card-shadow-hover);
+      box-shadow: var(--card-shadow);
     }
 
     .apply-selected-btn:disabled {
@@ -519,110 +632,30 @@
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
+      opacity: 0.6;
     }
 
-    /* Redesigned filter selection modal */
-    #filterSelection {
-      background: var(--modal-bg);
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-      border: 1px solid var(--border-color);
-      max-width: 95%;
-      margin: 0 auto;
-      padding: 24px 20px 20px 20px !important;
-      position: relative;
-    }
-    #filterSelection h3 {
-      margin-bottom: 18px;
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--primary-color);
-      justify-content: space-between;
-    }
-    .filter-checkbox-group {
-      margin: 0 0 18px 0;
-      padding: 18px 14px 10px 14px;
-      background: var(--card-bg);
-      border-radius: 14px;
-      border: 1px solid var(--border-color);
-      box-shadow: var(--card-shadow);
-    }
-    .filter-checkbox-group .filter-checkbox-header {
+    .cancel-btn {
+      flex: 1;
+      background: var(--danger-gradient);
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-    .filter-checkbox-group .filter-checkbox-header label {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-color);
-    }
-    .modern-checkbox {
-      appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 2px solid var(--checkbox-border);
-      background: var(--checkbox-bg);
-      outline: none;
-      cursor: pointer;
-      position: relative;
-      transition: border-color 0.2s, background 0.2s;
-      margin-left: 0.5em;
-      margin-right: 0.5em;
-      display: inline-block;
-      vertical-align: middle;
-    }
-    .modern-checkbox:checked {
-      background: var(--checkbox-checked);
-      border-color: var(--checkbox-checked);
-    }
-    .modern-checkbox:checked::after {
-      content: '';
-      display: block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #fff;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-    .filter-checkbox-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .filter-checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      background: var(--background-color);
-      border-radius: 10px;
-      border: 1.5px solid var(--border-color);
-      cursor: pointer;
+      justify-content: center;
+      gap: 6px;
       transition: all var(--transition-speed) ease;
       font-size: 14px;
-      font-weight: 500;
-      color: var(--text-color);
-      min-width: 90px;
-      min-height: 36px;
     }
-    .filter-checkbox-item:hover {
-      background: rgba(124, 58, 237, 0.08);
-      border-color: var(--primary-color);
+
+    .cancel-btn:hover {
+      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
       transform: translateY(-1px);
-    }
-    .filter-checkbox-item label {
-      cursor: pointer;
-      font-size: 14px;
-      user-select: none;
-      color: var(--text-color);
-      margin-left: 2px;
+      box-shadow: var(--card-shadow);
     }
   </style>
 </head>
@@ -670,38 +703,6 @@
 
   <!-- Saved Filters List -->
   <div id="savedFilters" class="saved-filters-list"></div>
-
-  <!-- Filter Selection Modal (hidden by default) -->
-  <div id="filterSelection" style="display: none; padding: 16px;">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-      <h3 style="margin: 0;">Select Filters to Apply</h3>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <label style="font-size: 15px; font-weight: 600; color: var(--text-color); margin-right: 4px;">Select All</label>
-        <input type="checkbox" id="selectAllFilters" class="modern-checkbox" title="Select All Filters">
-      </div>
-    </div>
-    <div class="filter-checkbox-group">
-      <div class="filter-checkbox-header">
-        <label>Brands</label>
-        <input type="checkbox" id="selectAllBrands" class="modern-checkbox" title="Select All Brands">
-      </div>
-      <div id="brandCheckboxes" class="filter-checkbox-list"></div>
-      <div class="filter-checkbox-header">
-        <label>Sizes</label>
-        <input type="checkbox" id="selectAllSizes" class="modern-checkbox" title="Select All Sizes">
-      </div>
-      <div id="sizeCheckboxes" class="filter-checkbox-list"></div>
-      <div class="filter-checkbox-header">
-        <label>Colors</label>
-        <input type="checkbox" id="selectAllColors" class="modern-checkbox" title="Select All Colors">
-      </div>
-      <div id="colorCheckboxes" class="filter-checkbox-list"></div>
-    </div>
-    <button id="applySelected" class="apply-selected-btn" disabled>
-      <i class="fa-solid fa-check"></i> Apply Selected Filters
-    </button>
-    <button id="closeSelection" style="margin-top:8px;">Cancel</button>
-  </div>
 
   <!-- Bottom Bar -->
   <div class="bottom-bar">

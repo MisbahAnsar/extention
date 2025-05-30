@@ -4,9 +4,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
   const url = new URL(tab.url);
 
   if (!url.hostname.includes('ajio.com') && !url.hostname.includes('myntra.com') && 
-      !url.hostname.includes('amazon.in') && !url.hostname.includes('flipkart.com') &&
-      !url.hostname.includes('nykaa.com')) {
-    showMessage("This extension only works on AJIO, Myntra, Amazon, Flipkart, or Nykaa.", true);
+      !url.hostname.includes('amazon.in') && !url.hostname.includes('flipkart.com')) {
+    showMessage("This extension only works on AJIO, Myntra, Amazon, or Flipkart.", true);
     return;
   }
 
@@ -233,6 +232,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
           console.log("[Popup] Rendering filter set:", filterSet.name);
           const filterSetDiv = document.createElement('div');
           filterSetDiv.className = 'filter-set';
+          filterSetDiv.dataset.filterId = filterSet.id;
           
           // Format display text for each filter type
           const formatFilterText = (filters) => {
@@ -261,7 +261,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
           
           const applyBtn = document.createElement('button');
           applyBtn.textContent = 'Apply';
-          applyBtn.addEventListener('click', () => showFilterSelection(filterSet));
+          applyBtn.addEventListener('click', () => showFilterSelection(filterSet, filterSetDiv));
           
           const deleteBtn = document.createElement('button');
           deleteBtn.textContent = 'Delete';
@@ -289,17 +289,65 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     // Check if a hostname is compatible with our extension
     function isCompatibleSite(hostname) {
       return hostname.includes('ajio.com') || hostname.includes('myntra.com') || 
-             hostname.includes('amazon.in') || hostname.includes('flipkart.com') ||
-             hostname.includes('nykaa.com') || hostname.includes('nykaa.com');
+             hostname.includes('amazon.in') || hostname.includes('flipkart.com');
     }
     
-    // Function to show filter selection UI
-    function showFilterSelection(filterSet) {
-      const filterSelection = document.getElementById('filterSelection');
-      const brandCheckboxes = document.getElementById('brandCheckboxes');
-      const sizeCheckboxes = document.getElementById('sizeCheckboxes');
-      const colorCheckboxes = document.getElementById('colorCheckboxes');
-      const applySelectedBtn = document.getElementById('applySelected');
+    // Function to show filter selection UI - now accepts the filter container element
+    function showFilterSelection(filterSet, filterContainer) {
+      // Remove any existing filter selection modals
+      const existingModals = document.querySelectorAll('.inline-filter-selection');
+      existingModals.forEach(modal => modal.remove());
+      
+      // Create the filter selection modal
+      const filterSelection = document.createElement('div');
+      filterSelection.className = 'inline-filter-selection';
+      filterSelection.innerHTML = `
+        <div class="filter-selection-header">
+          <h4>Select Filters to Apply</h4>
+          <div class="select-all-container">
+            <label>Select All</label>
+            <input type="checkbox" id="selectAllFilters" class="modern-checkbox">
+          </div>
+        </div>
+        
+        <div class="filter-checkbox-group">
+          <div class="filter-checkbox-header">
+            <label>Brands</label>
+            <input type="checkbox" id="selectAllBrands" class="modern-checkbox">
+          </div>
+          <div id="brandCheckboxes" class="filter-checkbox-list"></div>
+          
+          <div class="filter-checkbox-header">
+            <label>Sizes</label>
+            <input type="checkbox" id="selectAllSizes" class="modern-checkbox">
+          </div>
+          <div id="sizeCheckboxes" class="filter-checkbox-list"></div>
+          
+          <div class="filter-checkbox-header">
+            <label>Colors</label>
+            <input type="checkbox" id="selectAllColors" class="modern-checkbox">
+          </div>
+          <div id="colorCheckboxes" class="filter-checkbox-list"></div>
+        </div>
+        
+        <div class="filter-selection-buttons">
+          <button id="applySelected" class="apply-selected-btn" disabled>
+            <i class="fa-solid fa-check"></i> Apply Selected Filters
+          </button>
+          <button id="closeSelection" class="cancel-btn">
+            <i class="fa-solid fa-times"></i> Cancel
+          </button>
+        </div>
+      `;
+      
+      // Insert the modal right after the filter container
+      filterContainer.insertAdjacentElement('afterend', filterSelection);
+      
+      const brandCheckboxes = filterSelection.querySelector('#brandCheckboxes');
+      const sizeCheckboxes = filterSelection.querySelector('#sizeCheckboxes');
+      const colorCheckboxes = filterSelection.querySelector('#colorCheckboxes');
+      const applySelectedBtn = filterSelection.querySelector('#applySelected');
+      const closeSelectionBtn = filterSelection.querySelector('#closeSelection');
       
       // Clear previous checkboxes
       brandCheckboxes.innerHTML = '';
@@ -333,62 +381,65 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         });
       }
       
-      // Show filter selection UI
-      filterSelection.style.display = 'block';
-      
       // Update apply button state
-      updateApplyButtonState();
+      updateApplyButtonState(filterSelection);
       
       // Add event listeners for checkboxes
-      document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', updateApplyButtonState);
+      filterSelection.querySelectorAll('.filter-checkbox-item input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => updateApplyButtonState(filterSelection));
       });
 
       // Add event listeners for select all checkboxes
-      const selectAllFilters = document.getElementById('selectAllFilters');
-      const selectAllBrands = document.getElementById('selectAllBrands');
-      const selectAllSizes = document.getElementById('selectAllSizes');
-      const selectAllColors = document.getElementById('selectAllColors');
+      const selectAllFilters = filterSelection.querySelector('#selectAllFilters');
+      const selectAllBrands = filterSelection.querySelector('#selectAllBrands');
+      const selectAllSizes = filterSelection.querySelector('#selectAllSizes');
+      const selectAllColors = filterSelection.querySelector('#selectAllColors');
 
       // Handle main "Select All" checkbox
       selectAllFilters.addEventListener('change', (e) => {
         const isChecked = e.target.checked;
-        // Update all individual checkboxes
         selectAllBrands.checked = isChecked;
         selectAllSizes.checked = isChecked;
         selectAllColors.checked = isChecked;
         
-        // Update all filter checkboxes
-        document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]').forEach(checkbox => {
+        filterSelection.querySelectorAll('.filter-checkbox-item input[type="checkbox"]').forEach(checkbox => {
           checkbox.checked = isChecked;
         });
-        updateApplyButtonState();
+        updateApplyButtonState(filterSelection);
       });
 
       // Handle individual group checkboxes
       selectAllBrands.addEventListener('change', (e) => {
         const checkboxes = brandCheckboxes.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => checkbox.checked = e.target.checked);
-        updateSelectAllState();
-        updateApplyButtonState();
+        updateSelectAllState(filterSelection);
+        updateApplyButtonState(filterSelection);
       });
 
       selectAllSizes.addEventListener('change', (e) => {
         const checkboxes = sizeCheckboxes.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => checkbox.checked = e.target.checked);
-        updateSelectAllState();
-        updateApplyButtonState();
+        updateSelectAllState(filterSelection);
+        updateApplyButtonState(filterSelection);
       });
 
       selectAllColors.addEventListener('change', (e) => {
         const checkboxes = colorCheckboxes.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => checkbox.checked = e.target.checked);
-        updateSelectAllState();
-        updateApplyButtonState();
+        updateSelectAllState(filterSelection);
+        updateApplyButtonState(filterSelection);
       });
 
       // Add event listener for apply button
-      applySelectedBtn.onclick = () => applySelectedFilters(filterSet);
+      applySelectedBtn.addEventListener('click', () => applySelectedFilters(filterSet, filterSelection));
+      
+      // Add event listener for close button
+      closeSelectionBtn.addEventListener('click', () => {
+        filterSelection.remove();
+      });
+      
+      // Scroll the modal into view
+      filterSelection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
     // Helper function to create checkbox item
@@ -400,6 +451,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       checkbox.type = 'checkbox';
       checkbox.id = `filter-${value}`;
       checkbox.value = value;
+      checkbox.className = 'modern-checkbox';
       
       const label = document.createElement('label');
       label.htmlFor = `filter-${value}`;
@@ -411,23 +463,23 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     }
     
     // Helper function to update apply button state
-    function updateApplyButtonState() {
-      const applySelectedBtn = document.getElementById('applySelected');
-      const hasSelectedFilters = document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]:checked').length > 0;
+    function updateApplyButtonState(container) {
+      const applySelectedBtn = container.querySelector('#applySelected');
+      const hasSelectedFilters = container.querySelectorAll('.filter-checkbox-item input[type="checkbox"]:checked').length > 0;
       applySelectedBtn.disabled = !hasSelectedFilters;
     }
     
     // Helper function to update the main "Select All" checkbox state
-    function updateSelectAllState() {
-      const selectAllFilters = document.getElementById('selectAllFilters');
-      const allCheckboxes = document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]');
-      const checkedCheckboxes = document.querySelectorAll('.filter-checkbox-item input[type="checkbox"]:checked');
+    function updateSelectAllState(container) {
+      const selectAllFilters = container.querySelector('#selectAllFilters');
+      const allCheckboxes = container.querySelectorAll('.filter-checkbox-item input[type="checkbox"]');
+      const checkedCheckboxes = container.querySelectorAll('.filter-checkbox-item input[type="checkbox"]:checked');
       
       selectAllFilters.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
     }
     
     // Function to apply selected filters
-    async function applySelectedFilters(filterSet) {
+    async function applySelectedFilters(filterSet, filterSelection) {
       const selectedFilters = {
         brands: [],
         sizes: [],
@@ -435,25 +487,31 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       };
       
       // Get selected brands
-      document.querySelectorAll('#brandCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
+      filterSelection.querySelectorAll('#brandCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
         selectedFilters.brands.push(checkbox.value);
       });
       
       // Get selected sizes
-      document.querySelectorAll('#sizeCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
+      filterSelection.querySelectorAll('#sizeCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
         selectedFilters.sizes.push(checkbox.value);
       });
       
       // Get selected colors
-      document.querySelectorAll('#colorCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
+      filterSelection.querySelectorAll('#colorCheckboxes input[type="checkbox"]:checked').forEach(checkbox => {
         selectedFilters.colors.push(checkbox.value);
       });
+      
+      // Show loading state
+      const applySelectedBtn = filterSelection.querySelector('#applySelected');
+      const originalText = applySelectedBtn.innerHTML;
+      applySelectedBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Applying Filters...';
+      applySelectedBtn.disabled = true;
       
       try {
         const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
         
         if (!isCompatibleSite(new URL(tab.url).hostname)) {
-          throw new Error('Please navigate to Ajio, Myntra, Amazon, Flipkart, or Nykaa first');
+          throw new Error('Please navigate to Ajio, Myntra, Amazon, or Flipkart first');
         }
 
         // Add origin site information
@@ -461,6 +519,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
 
         // For Amazon, reload the page first to avoid back/forward cache issues
         if (tab.url.includes('amazon.in')) {
+          applySelectedBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Reloading page...';
           await chrome.tabs.reload(tab.id);
           // Wait for page to load
           await new Promise(resolve => setTimeout(resolve, 3000));
@@ -497,14 +556,16 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         }
 
         // For all sites, wait longer for the page to be fully loaded
+        applySelectedBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparing filters...';
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         // Set up a timeout promise
         const timeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Operation timed out')), 30000); // 30 second timeout
+          setTimeout(() => reject(new Error('Operation timed out')), 45000); // 45 second timeout
         });
 
         // Apply selected filters with timeout and retries
+        applySelectedBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Applying filters...';
         const applyPromise = new Promise(async (resolve, reject) => {
           let lastError;
           for (let i = 0; i < 3; i++) {
@@ -530,21 +591,93 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         if (!response || !response.success) {
           // If we have a partial success, show a different message
           if (response?.partialSuccess) {
-            showMessage('Some filters were applied successfully, but not all. Please check the results.', false);
-            document.getElementById('filterSelection').style.display = 'none';
+            const summary = response.result?.summary;
+            if (summary) {
+              const successMessage = `Partially applied filters: ${summary.totalApplied}/${summary.totalRequested} filters applied successfully.`;
+              const detailMessage = createDetailedFilterMessage(summary, true);
+              showMessage(successMessage + detailMessage, false);
+            } else {
+              showMessage('Some filters were applied successfully, but not all. Please check the results.', false);
+            }
+            filterSelection.remove();
             window.close();
             return;
           }
           throw new Error(response?.error || 'Failed to apply filters. Please try again.');
         }
         
-        showMessage(`Selected filters from "${filterSet.name}" applied successfully!`);
-        document.getElementById('filterSelection').style.display = 'none';
+        // Handle successful application
+        const summary = response.result?.summary;
+        if (summary) {
+          if (summary.totalApplied === summary.totalRequested) {
+            showMessage(`All ${summary.totalApplied} filters from "${filterSet.name}" applied successfully!`);
+          } else if (summary.totalApplied > 0) {
+            const successMessage = `Partially applied filters: ${summary.totalApplied}/${summary.totalRequested} filters applied successfully.`;
+            const detailMessage = createDetailedFilterMessage(summary, true);
+            showMessage(successMessage + detailMessage, false);
+          } else {
+            showMessage('No filters could be applied. Please check if the filters are still available on the page.', true);
+          }
+        } else {
+          showMessage(`Selected filters from "${filterSet.name}" applied successfully!`);
+        }
+        
+        filterSelection.remove();
         window.close(); // Close popup after successful apply
       } catch (error) {
         console.error("[Popup] Error applying filters:", error);
-        showMessage(`Error applying filters: ${error.message}`, true);
+        
+        // Create detailed error message
+        let errorMessage = `Error applying filters: ${error.message}`;
+        if (error.message.includes('timeout')) {
+          errorMessage += ' The operation took too long. Some filters might have been applied. Please check the page.';
+        }
+        
+        showMessage(errorMessage, true);
+      } finally {
+        // Restore button state
+        applySelectedBtn.innerHTML = originalText;
+        applySelectedBtn.disabled = false;
       }
+    }
+    
+    // Helper function to create detailed filter messages
+    function createDetailedFilterMessage(summary, isPartial = false) {
+      const parts = [];
+      
+      if (summary.appliedFilters.brands.length > 0) {
+        parts.push(`Brands: ${summary.appliedFilters.brands.join(', ')}`);
+      }
+      if (summary.appliedFilters.sizes.length > 0) {
+        parts.push(`Sizes: ${summary.appliedFilters.sizes.join(', ')}`);
+      }
+      if (summary.appliedFilters.colors.length > 0) {
+        parts.push(`Colors: ${summary.appliedFilters.colors.join(', ')}`);
+      }
+      
+      let message = '';
+      if (parts.length > 0) {
+        message += ` Successfully applied: ${parts.join('; ')}.`;
+      }
+      
+      if (isPartial) {
+        const failedParts = [];
+        if (summary.failedFilters.brands.length > 0) {
+          failedParts.push(`Brands: ${summary.failedFilters.brands.join(', ')}`);
+        }
+        if (summary.failedFilters.sizes.length > 0) {
+          failedParts.push(`Sizes: ${summary.failedFilters.sizes.join(', ')}`);
+        }
+        if (summary.failedFilters.colors.length > 0) {
+          failedParts.push(`Colors: ${summary.failedFilters.colors.join(', ')}`);
+        }
+        
+        if (failedParts.length > 0) {
+          message += ` Failed to apply: ${failedParts.join('; ')}.`;
+        }
+      }
+      
+      return message;
     }
     
     // Delete a filter set
@@ -582,18 +715,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     
     // Load saved filters when popup opens
     loadSavedFilters();
-
-    // Ensure all checkboxes in filter selection modal use .modern-checkbox
-    function updateCheckboxStyles() {
-      const allCheckboxes = document.querySelectorAll('#filterSelection input[type="checkbox"]');
-      allCheckboxes.forEach(cb => {
-        cb.classList.add('modern-checkbox');
-      });
-    }
-    // Call after rendering modal
-    const observer = new MutationObserver(updateCheckboxStyles);
-    observer.observe(document.getElementById('filterSelection'), { childList: true, subtree: true });
-    updateCheckboxStyles();
   });
 });
 

@@ -88,39 +88,239 @@ async function getAmazonFilters() {
     colors: []
   };
 
-  // Get selected brands
+  console.log("[Content Script] Starting enhanced Amazon filter detection...");
+
+  // Enhanced Brand Filter Detection (Original + New Logic)
+  console.log("[Content Script] Detecting Amazon brand filters...");
+  
+  // Method 1: Original detection logic (checkbox-based)
   const brandLinks = document.querySelectorAll('#filter-p_123 .a-link-normal.s-navigation-item');
   for (const link of brandLinks) {
     const checkbox = link.querySelector('input[type="checkbox"]');
     if (checkbox && checkbox.checked) {
       const brandText = link.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-      if (brandText) {
+      if (brandText && !filters.brands.includes(brandText)) {
         filters.brands.push(brandText);
+        console.log(`[Content Script] Found brand via checkbox method: ${brandText}`);
       }
     }
   }
 
-  // Get selected sizes
+  // Method 2: Enhanced detection using aria-current="true" for brands
+  const selectedBrandLinks = document.querySelectorAll('#filter-p_123 .a-link-normal.s-navigation-item[aria-current="true"]');
+  for (const link of selectedBrandLinks) {
+    const brandText = link.querySelector('.a-size-base.a-color-base')?.textContent.trim();
+    if (brandText && !filters.brands.includes(brandText)) {
+      filters.brands.push(brandText);
+      console.log(`[Content Script] Found brand via aria-current method: ${brandText}`);
+    }
+  }
+
+  // Method 3: Enhanced detection using button selection for brands
+  const selectedBrandButtons = document.querySelectorAll('#filter-p_123 .a-button-selected');
+  for (const button of selectedBrandButtons) {
+    const brandText = button.querySelector('.a-size-base')?.textContent.trim();
+    if (brandText && !filters.brands.includes(brandText)) {
+      filters.brands.push(brandText);
+      console.log(`[Content Script] Found brand via button selection method: ${brandText}`);
+    }
+  }
+
+  // Method 4: Check expanded content for brands
+  const expandedBrandContent = document.querySelector('#filter-p_123 .a-expander-content');
+  if (expandedBrandContent && !expandedBrandContent.style.display.includes('none')) {
+    const expandedBrandLinks = expandedBrandContent.querySelectorAll('.a-link-normal.s-navigation-item[aria-current="true"]');
+    for (const link of expandedBrandLinks) {
+      const brandText = link.querySelector('.a-size-base.a-color-base')?.textContent.trim();
+      if (brandText && !filters.brands.includes(brandText)) {
+        filters.brands.push(brandText);
+        console.log(`[Content Script] Found brand via expanded content method: ${brandText}`);
+      }
+    }
+  }
+
+  // Enhanced Size Filter Detection (Original + New Logic)
+  console.log("[Content Script] Detecting Amazon size filters...");
+  
+  // Method 1: Original detection logic (aria-current based)
   const sizeLinks = document.querySelectorAll('#filter-p_n_size_browse-vebin .a-link-normal.s-navigation-item');
   for (const link of sizeLinks) {
     if (link.getAttribute('aria-current') === 'true') {
       const sizeText = link.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-      if (sizeText) {
+      if (sizeText && !filters.sizes.includes(sizeText)) {
         filters.sizes.push(sizeText);
+        console.log(`[Content Script] Found size via aria-current method: ${sizeText}`);
       }
     }
   }
 
-  // Get selected colors
-  const colorLinks = document.querySelectorAll('#filter-p_n_size_two_browse-vebin .a-link-normal.s-navigation-item');
-  for (const link of colorLinks) {
-    const colorText = link.getAttribute('title');
-    if (colorText && link.getAttribute('aria-current') === 'true') {
-      filters.colors.push(colorText);
+  // Method 2: Enhanced detection using button selection for sizes
+  const selectedSizeButtons = document.querySelectorAll('#filter-p_n_size_browse-vebin .a-button-selected');
+  for (const button of selectedSizeButtons) {
+    const sizeText = button.querySelector('.a-size-base, .a-button-text')?.textContent.trim();
+    if (sizeText && !filters.sizes.includes(sizeText)) {
+      filters.sizes.push(sizeText);
+      console.log(`[Content Script] Found size via button selection method: ${sizeText}`);
     }
   }
 
-  console.log("[Content Script] Extracted Amazon filters:", filters);
+  // Method 3: Check for aria-pressed="true" buttons for sizes
+  const pressedSizeButtons = document.querySelectorAll('#filter-p_n_size_browse-vebin button[aria-pressed="true"]');
+  for (const button of pressedSizeButtons) {
+    const sizeText = button.textContent.trim() || button.getAttribute('aria-label');
+    if (sizeText && !filters.sizes.includes(sizeText)) {
+      filters.sizes.push(sizeText);
+      console.log(`[Content Script] Found size via aria-pressed method: ${sizeText}`);
+    }
+  }
+
+  // Method 4: Check for selected size containers
+  const selectedSizeContainers = document.querySelectorAll('#filter-p_n_size_browse-vebin li .a-list-item a[aria-current="true"]');
+  for (const container of selectedSizeContainers) {
+    const sizeText = container.querySelector('button')?.textContent.trim() || 
+                     container.querySelector('.a-size-base')?.textContent.trim() ||
+                     container.getAttribute('aria-label');
+    if (sizeText && !filters.sizes.includes(sizeText)) {
+      filters.sizes.push(sizeText);
+      console.log(`[Content Script] Found size via container selection method: ${sizeText}`);
+    }
+  }
+
+  // Enhanced Color Filter Detection (Original + New Logic)
+  console.log("[Content Script] Detecting Amazon color filters...");
+  
+  // Method 1: Original detection logic (aria-current and title based)
+  const colorLinks = document.querySelectorAll('#filter-p_n_size_two_browse-vebin .a-link-normal.s-navigation-item');
+  for (const link of colorLinks) {
+    const colorText = link.getAttribute('title');
+    if (colorText && link.getAttribute('aria-current') === 'true' && !filters.colors.includes(colorText)) {
+      filters.colors.push(colorText);
+      console.log(`[Content Script] Found color via title method: ${colorText}`);
+    }
+  }
+
+  // Method 2: Enhanced detection using aria-label for colors
+  const selectedColorLinks = document.querySelectorAll('#filter-p_n_size_two_browse-vebin a[aria-current="true"]');
+  for (const link of selectedColorLinks) {
+    const colorText = link.getAttribute('title') || link.getAttribute('aria-label');
+    if (colorText && !filters.colors.includes(colorText)) {
+      // Extract color name from aria-label if needed (e.g., "Remove the filter Black to expand results" -> "Black")
+      const colorMatch = colorText.match(/(?:filter|the)\s+([A-Za-z\s]+)\s+to/i);
+      const extractedColor = colorMatch ? colorMatch[1].trim() : colorText;
+      if (extractedColor && !filters.colors.includes(extractedColor)) {
+        filters.colors.push(extractedColor);
+        console.log(`[Content Script] Found color via aria-label method: ${extractedColor}`);
+      }
+    }
+  }
+
+  // Method 3: Check for color sprite elements with selection indicators
+  const colorSprites = document.querySelectorAll('#filter-p_n_size_two_browse-vebin .colorsprite');
+  for (const sprite of colorSprites) {
+    const parentLink = sprite.closest('a');
+    if (parentLink && parentLink.getAttribute('aria-current') === 'true') {
+      const colorText = parentLink.getAttribute('title') || parentLink.getAttribute('aria-label');
+      if (colorText && !filters.colors.includes(colorText)) {
+        filters.colors.push(colorText);
+        console.log(`[Content Script] Found color via sprite method: ${colorText}`);
+      }
+    }
+  }
+
+  // Method 4: Check for color containers with selection state
+  const selectedColorContainers = document.querySelectorAll('#filter-p_n_size_two_browse-vebin li .a-list-item a[aria-current="true"]');
+  for (const container of selectedColorContainers) {
+    const colorText = container.getAttribute('title') || 
+                      container.getAttribute('aria-label') ||
+                      container.querySelector('.a-size-base')?.textContent.trim();
+    if (colorText && !filters.colors.includes(colorText)) {
+      // Handle aria-label extraction if needed
+      const colorMatch = colorText.match(/(?:filter|the)\s+([A-Za-z\s]+)\s+to/i);
+      const extractedColor = colorMatch ? colorMatch[1].trim() : colorText;
+      if (extractedColor && !filters.colors.includes(extractedColor)) {
+        filters.colors.push(extractedColor);
+        console.log(`[Content Script] Found color via container method: ${extractedColor}`);
+      }
+    }
+  }
+
+  // Additional fallback detection methods
+  console.log("[Content Script] Running fallback detection methods...");
+
+  // Enhanced helper function to determine if a text is a size
+  const isSize = (text) => {
+    // Match standard letter sizes (S, M, L, XL, XXL, etc.)
+    if (text.match(/^(XS|S|M|L|XL|XXL|XXXL|2XL|3XL|4XL|5XL)$/i)) return true;
+    // Match numeric sizes (including single and double digits with optional decimal)
+    if (text.match(/^(\d{1,2}(\.\d+)?)$/i)) return true;
+    // Match special size codes like OS (One Size), FS (Free Size), etc.
+    if (text.match(/^(OS|FS|Free Size|One Size)$/i)) return true;
+    // Match UK sizes
+    if (text.match(/^UK \d+$/i)) return true;
+    return false;
+  };
+
+  // Enhanced helper function to determine if a text is a color
+  const isColor = (text) => {
+    return text.match(/^(Black|White|Red|Blue|Green|Yellow|Beige|Brown|Grey|Pink|Purple|Orange|Navy|Maroon|Olive|Teal|Cyan|Magenta|Gold|Silver|Bronze|Multicolor|Printed|Striped|Floral|Geometric|Abstract|Animal Print|Camouflage|Tie & Dye|Ombre|Metallic|Glitter|Holographic|Neon|Pastel|Vintage|Washed|Faded|Distressed|Embellished|Sequined|Beaded|Quilted|Crochet|Knit|Woven|Denim|Leather|Suede|Velvet|Satin|Silk|Cotton|Linen|Wool|Polyester|Nylon|Spandex|Rayon|Viscose|Acrylic|Fleece|Fur|Faux Fur|Mesh|Net|Lace)$/i);
+  };
+
+  // Fallback: Check for any elements with "Remove the filter" text patterns
+  const removeFilterLinks = document.querySelectorAll('a[aria-label*="Remove the filter"]');
+  for (const link of removeFilterLinks) {
+    const ariaLabel = link.getAttribute('aria-label');
+    if (ariaLabel) {
+      const filterMatch = ariaLabel.match(/Remove the filter ([A-Za-z0-9\s\.]+) to/i);
+      if (filterMatch) {
+        const filterValue = filterMatch[1].trim();
+        const parentContainer = link.closest('#filter-p_123, #filter-p_n_size_browse-vebin, #filter-p_n_size_two_browse-vebin');
+        
+        if (parentContainer) {
+          const containerId = parentContainer.id;
+          
+          // Check based on container ID first, then fallback to content analysis
+          if (containerId.includes('p_123')) {
+            // This is the brand section, but double-check it's not a misplaced size
+            if (!isSize(filterValue) && !isColor(filterValue) && !filters.brands.includes(filterValue)) {
+              filters.brands.push(filterValue);
+              console.log(`[Content Script] Found brand via fallback method: ${filterValue}`);
+            } else if (isSize(filterValue) && !filters.sizes.includes(filterValue)) {
+              // Size value found in brand section - add to sizes instead
+              filters.sizes.push(filterValue);
+              console.log(`[Content Script] Found misplaced size in brand section, corrected: ${filterValue}`);
+            }
+          } else if (containerId.includes('size_browse') && !filters.sizes.includes(filterValue)) {
+            filters.sizes.push(filterValue);
+            console.log(`[Content Script] Found size via fallback method: ${filterValue}`);
+          } else if (containerId.includes('size_two_browse') && !filters.colors.includes(filterValue)) {
+            filters.colors.push(filterValue);
+            console.log(`[Content Script] Found color via fallback method: ${filterValue}`);
+          }
+        } else {
+          // No parent container found, analyze the content
+          if (isSize(filterValue) && !filters.sizes.includes(filterValue)) {
+            filters.sizes.push(filterValue);
+            console.log(`[Content Script] Found size via content analysis: ${filterValue}`);
+          } else if (isColor(filterValue) && !filters.colors.includes(filterValue)) {
+            filters.colors.push(filterValue);
+            console.log(`[Content Script] Found color via content analysis: ${filterValue}`);
+          } else if (!filters.brands.includes(filterValue)) {
+            filters.brands.push(filterValue);
+            console.log(`[Content Script] Found brand via content analysis: ${filterValue}`);
+          }
+        }
+      }
+    }
+  }
+
+  console.log("[Content Script] Enhanced Amazon filter detection complete");
+  console.log("[Content Script] Final extracted Amazon filters:", {
+    brands: filters.brands,
+    sizes: filters.sizes,
+    colors: filters.colors,
+    totalFilters: filters.brands.length + filters.sizes.length + filters.colors.length
+  });
+  
   return filters;
 }
 
@@ -160,8 +360,6 @@ async function getCurrentFilters() {
         filters = await getFlipkartFilters();
       } else if (hostname.includes('snapdeal.com')) {
         filters = await getSnapdealFilters();
-      } else if (hostname.includes('nykaa.com')) {
-        filters = await getNykaaFilters();
       }
     } catch (firstError) {
       console.warn("[Content Script] First attempt to get filters failed:", firstError);
@@ -180,8 +378,6 @@ async function getCurrentFilters() {
         filters = await getFlipkartFilters();
       } else if (hostname.includes('snapdeal.com')) {
         filters = await getSnapdealFilters();
-      } else if (hostname.includes('nykaa.com')) {
-        filters = await getNykaaFilters();
       }
     }
 
@@ -221,6 +417,13 @@ async function applyFilters(filters) {
       originSite: filters.originSite || null
     };
 
+    // Store original requested filters for toast comparison
+    const requestedFilters = {
+      brands: [...normalizedFilters.brands],
+      sizes: [...normalizedFilters.sizes], 
+      colors: [...normalizedFilters.colors]
+    };
+
     let result;
     if (hostname.includes('myntra.com')) {
       console.log("[Content Script] Applying filters on Myntra");
@@ -237,10 +440,20 @@ async function applyFilters(filters) {
     } else if (hostname.includes('snapdeal.com')) {
       console.log("[Content Script] Applying filters on Snapdeal");
       result = await applySnapdealFilters(normalizedFilters);
-    } else if (hostname.includes('nykaa.com')) {
-      console.log("[Content Script] Applying filters on Nykaa");
-      result = await applyNykaaFilters(normalizedFilters);
     }
+    
+    // Show toast notification for unmatched filters after a short delay
+    setTimeout(() => {
+      try {
+        if (result && result.results) {
+          showUnmatchedFiltersToast(requestedFilters, result.results);
+        } else {
+          console.warn("[Content Script] No results available for toast notification");
+        }
+      } catch (toastError) {
+        console.error("[Content Script] Error showing toast notification:", toastError);
+      }
+    }, 1000); // Small delay to ensure filter application is fully complete
     
     // Return success even if some filters couldn't be applied
     return { 
@@ -336,15 +549,6 @@ async function waitForElements(maxAttempts = 10, delay = 1000) {
         console.log("[Content Script] Found Snapdeal filter sections:", filterSections.length);
         return true;
       }
-    } else if (hostname.includes('nykaa.com')) {
-      const brandFilter = document.querySelector('#first-filter');
-      const filterSections = document.querySelectorAll('div[class="css-w2222k"]');
-      const appliedFilters = document.querySelector('.css-19j3ean');
-      
-      if (brandFilter || filterSections.length > 0 || appliedFilters) {
-        console.log("[Content Script] Found Nykaa filter elements");
-        return true;
-      }
     }
     
     attempts++;
@@ -379,8 +583,6 @@ async function applyCrossSiteFilters(filters, site) {
       result = await applyFlipkartFilters(filters);
     } else if (site === 'snapdeal') {
       result = await applySnapdealFilters(filters);
-    } else if (site === 'nykaa') {
-      result = await applyNykaaFilters(filters);
     } else {
       throw new Error(`Unsupported site: ${site}`);
     }
@@ -471,348 +673,824 @@ async function verifyFiltersApplied(filters, site) {
   }
 }
 
-// Update applyBrandFilters to handle multiple brands better
+// Update applyBrandFilters to handle multiple brands better with improved retry logic
 async function applyBrandFilters(brands, site) {
   console.log(`[Content Script] Applying brand filters:`, brands);
   let appliedCount = 0;
+  let successfulBrands = [];
   
   for (const brand of brands) {
     let brandName = typeof brand === 'string' ? brand : brand.text;
     console.log(`[Content Script] Attempting to apply brand filter: ${brandName}`);
     
-    try {
-      if (site === 'myntra') {
-        // First try to find the brand in the filter summary
-        const filterList = document.querySelector('.filter-summary-filterList');
-        if (filterList) {
-          const brandFilter = Array.from(filterList.querySelectorAll('.filter-summary-filter'))
-            .find(filter => filter.textContent.trim() === brandName);
-          
-          if (brandFilter) {
-            console.log("[Content Script] Brand already applied:", brandName);
-            appliedCount++;
-            continue;
-          }
-        }
-
-        // Find and select the brand in the vertical filters
-        const brandOptions = document.querySelectorAll('.brand-list label');
-        let brandFound = false;
+    // Try up to 3 times for each brand
+    let brandApplied = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`[Content Script] Brand "${brandName}" - Attempt ${attempt}/3`);
         
-        for (const option of brandOptions) {
-          const optionText = option.textContent.trim().toLowerCase();
-          if (optionText.includes(brandName.toLowerCase())) {
-            console.log("[Content Script] Found matching brand option, clicking");
-            const checkbox = option.querySelector('input[type="checkbox"]');
-            if (checkbox && !checkbox.checked) {
-              checkbox.click();
-              brandFound = true;
+        if (site === 'myntra') {
+          // First check if brand is already applied
+          const filterList = document.querySelector('.filter-summary-filterList');
+          if (filterList) {
+            const existingFilter = Array.from(filterList.querySelectorAll('.filter-summary-filter'))
+              .find(filter => filter.textContent.trim() === brandName);
+            
+            if (existingFilter) {
+              console.log(`[Content Script] Brand already applied: ${brandName}`);
               appliedCount++;
-              // Wait for the checkbox to be checked
-              await new Promise(resolve => setTimeout(resolve, 500));
+              successfulBrands.push(brandName);
+              brandApplied = true;
               break;
             }
           }
-        }
-        
-        if (!brandFound) {
-          console.warn(`[Content Script] Brand option not found: ${brandName}`);
-        }
-      } 
-      else if (site === 'ajio') {
-        // First try to find the brand in the breadcrumb container
-        const appliedFilters = document.querySelector('.fnl-plp-appliedFliters');
-        if (appliedFilters) {
-          const brandFilter = Array.from(appliedFilters.querySelectorAll('.fnl-plp-afliter'))
-            .find(filter => filter.querySelector('.pull-left').textContent.trim() === brandName);
-          
-          if (brandFilter) {
-            console.log("[Content Script] Brand already applied:", brandName);
-            appliedCount++;
-            continue;
-          }
-        }
 
-        // If not found in breadcrumb, try to apply through facet list
-        const brandFacet = document.querySelector('.cat-facets .facet-left-pane-label[aria-label="brands"]');
-        if (brandFacet) {
-          console.log("[Content Script] Found brand facet, clicking to expand");
-          brandFacet.closest('.facet-head').click();
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Find and select the brand in the facet list
-          const brandOptions = document.querySelectorAll('.facet-linkname-brand');
+          // Find and select the brand in the vertical filters
+          const brandOptions = document.querySelectorAll('.brand-list label');
           let brandFound = false;
           
           for (const option of brandOptions) {
             const optionText = option.textContent.trim().toLowerCase();
-            if (optionText.includes(brandName.toLowerCase())) {
-              console.log("[Content Script] Found matching brand option, clicking");
-              const checkbox = option.closest('.facet-linkfref').querySelector('input[type="checkbox"]');
+            const brandNameLower = brandName.toLowerCase();
+            
+            // Extract just the brand name (remove count numbers in parentheses)
+            const cleanOptionText = optionText.replace(/\s*\(\d+\)\s*$/, '').trim();
+            
+            // Use exact matching for brands
+            if (cleanOptionText === brandNameLower) {
+              console.log(`[Content Script] Found exact matching brand option: ${cleanOptionText}`);
+              const checkbox = option.querySelector('input[type="checkbox"]');
               if (checkbox && !checkbox.checked) {
                 checkbox.click();
                 brandFound = true;
+                
+                // Wait and verify the checkbox was checked
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                if (checkbox.checked) {
+                  console.log(`[Content Script] Successfully checked brand: ${brandName}`);
+                  appliedCount++;
+                  successfulBrands.push(brandName);
+                  brandApplied = true;
+                  
+                  // Additional wait for filter to be processed
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+                break;
+              } else if (checkbox && checkbox.checked) {
+                console.log(`[Content Script] Brand already checked: ${brandName}`);
                 appliedCount++;
-                // Wait for the checkbox to be checked
-                await new Promise(resolve => setTimeout(resolve, 500));
+                successfulBrands.push(brandName);
+                brandApplied = true;
                 break;
               }
             }
           }
           
           if (!brandFound) {
-            console.warn(`[Content Script] Brand option not found: ${brandName}`);
+            console.warn(`[Content Script] Brand option not found in main list: ${brandName}`);
+            // Try the "Show More" modal if brand not found in main section
+            const moreButton = document.querySelector('.brand-more');
+            if (moreButton) {
+              console.log(`[Content Script] Clicking .brand-more to open modal for brand: ${brandName}`);
+              moreButton.click();
+              // Wait for modal to appear, retry up to 5 times
+              let modal = null;
+              for (let i = 0; i < 5; i++) {
+                modal = document.querySelector('.FilterDirectory-panel.FilterDirectory-expanded');
+                if (modal) {
+                  console.log(`[Content Script] Modal found on attempt ${i + 1}`);
+                  break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 700));
+              }
+              if (modal) {
+                // Find the brand in the modal
+                const modalBrandInputs = modal.querySelectorAll('.FilterDirectory-list input[type="checkbox"]');
+                let modalBrandFound = false;
+                for (const input of modalBrandInputs) {
+                  const label = input.closest('label');
+                  const brandText = label?.textContent.trim();
+                  const brandNameLower = brandName.toLowerCase();
+                  
+                  if (brandText) {
+                    // Extract just the brand name (remove count numbers in parentheses)
+                    const cleanBrandText = brandText.replace(/\s*\(\d+\)\s*$/, '').trim();
+                    
+                    // Use exact matching for brands in modal
+                    if (cleanBrandText === brandNameLower) {
+                      console.log(`[Content Script] Found exact matching brand in modal: ${cleanBrandText}`);
+                      if (!input.checked) {
+                        input.click();
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        if (input.checked) {
+                          console.log(`[Content Script] Successfully checked brand in modal: ${brandName}`);
+                          appliedCount++;
+                          successfulBrands.push(brandName);
+                          brandApplied = true;
+                          modalBrandFound = true;
+                        }
+                      } else {
+                        console.log(`[Content Script] Brand already checked in modal: ${brandName}`);
+                        appliedCount++;
+                        successfulBrands.push(brandName);
+                        brandApplied = true;
+                        modalBrandFound = true;
+                      }
+                      break;
+                    }
+                  }
+                }
+                if (!modalBrandFound) {
+                  console.warn(`[Content Script] Brand not found in modal either: ${brandName}`);
+                }
+                // Close the modal by clicking the close button
+                const closeBtn = modal.querySelector('.FilterDirectory-close');
+                if (closeBtn) {
+                  closeBtn.click();
+                  await new Promise(resolve => setTimeout(resolve, 700));
+                }
+              } else {
+                console.error(`[Content Script] Modal did not open for brand filters`);
+              }
+            } else {
+              console.warn(`[Content Script] .brand-more button not found for brands`);
+            }
           }
-        } else {
-          console.warn("[Content Script] Brand facet not found");
+        } 
+        else if (site === 'ajio') {
+          // Check existing filters
+          const appliedFilters = document.querySelector('.fnl-plp-appliedFliters');
+          if (appliedFilters) {
+            const existingFilter = Array.from(appliedFilters.querySelectorAll('.fnl-plp-afliter'))
+              .find(filter => filter.querySelector('.pull-left').textContent.trim() === brandName);
+            
+            if (existingFilter) {
+              console.log(`[Content Script] Brand already applied: ${brandName}`);
+              appliedCount++;
+              successfulBrands.push(brandName);
+              brandApplied = true;
+              break;
+            }
+          }
+
+          // First, find and expand the brand facet section
+          console.log(`[Content Script] Looking for brand facet section`);
+          const brandFacet = document.querySelector('.cat-facets .facet-left-pane-label[aria-label="brands"]');
+          if (brandFacet) {
+            console.log(`[Content Script] Found brand facet, expanding for: ${brandName}`);
+            
+            // Ensure facet is expanded by clicking the header
+            const facetHead = brandFacet.closest('.facet-head');
+            if (facetHead) {
+              // Check if it's already expanded
+              const facetBody = facetHead.nextElementSibling;
+              if (!facetBody || facetBody.style.display === 'none' || !facetBody.querySelector('.facet-linkfref')) {
+                console.log(`[Content Script] Expanding brand facet`);
+              facetHead.click();
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              } else {
+                console.log(`[Content Script] Brand facet already expanded`);
+              }
+            }
+            
+            // Now look for the brand in the visible options
+            const brandOptions = document.querySelectorAll('.facet-linkname-brand');
+            let brandFound = false;
+            
+            for (const option of brandOptions) {
+              const optionText = option.textContent.trim().toLowerCase();
+              if (optionText.includes(brandName.toLowerCase()) || brandName.toLowerCase().includes(optionText)) {
+                console.log(`[Content Script] Found matching brand option: ${optionText}`);
+                const checkbox = option.closest('.facet-linkfref').querySelector('input[type="checkbox"]');
+                if (checkbox && !checkbox.checked) {
+                  checkbox.click();
+                  brandFound = true;
+                  
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  
+                  if (checkbox.checked) {
+                    console.log(`[Content Script] Successfully applied brand: ${brandName}`);
+                    appliedCount++;
+                    successfulBrands.push(brandName);
+                    brandApplied = true;
+                    
+                    // Additional wait for page update
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                  }
+                  break;
+                } else if (checkbox && checkbox.checked) {
+                  console.log(`[Content Script] Brand already checked: ${brandName}`);
+                  appliedCount++;
+                  successfulBrands.push(brandName);
+                  brandApplied = true;
+                  break;
+                }
+              }
+            }
+            
+            if (!brandFound) {
+              console.warn(`[Content Script] Brand option not found in main list: ${brandName}`);
+              
+              // Try the "Show More" modal if brand not found in main section
+              console.log(`[Content Script] Looking for MORE button in brand section`);
+              
+              // Look for the MORE button specifically within the brand facet
+              const brandSection = brandFacet.closest('.cat-facets');
+              const moreButton = brandSection?.querySelector('.facet-more[aria-label="MORE"]');
+              
+              if (moreButton) {
+                console.log(`[Content Script] Found MORE button, clicking to open modal`);
+                moreButton.click();
+                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait longer for modal
+                
+                // Wait for modal to appear with multiple selector attempts
+                let modal = null;
+                for (let i = 0; i < 5; i++) {
+                  modal = document.querySelector('.modal-content .more-popup-container') || 
+                          document.querySelector('.more-popup-container') ||
+                          document.querySelector('[class*="modal"]');
+                  if (modal) {
+                    console.log(`[Content Script] Modal found on attempt ${i + 1}`);
+                    break;
+                  }
+                  console.log(`[Content Script] Waiting for modal, attempt ${i + 1}`);
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                if (modal) {
+                  console.log(`[Content Script] Modal opened successfully, searching for brand: ${brandName}`);
+                  
+                  // Search for the brand in the modal
+                  const modalBrandInputs = modal.querySelectorAll('input[name="brand"]');
+                  let modalBrandFound = false;
+                  
+                  console.log(`[Content Script] Found ${modalBrandInputs.length} brand inputs in modal`);
+                  
+                  for (const input of modalBrandInputs) {
+                    const label = input.closest('label');
+                    const brandText = label?.querySelector('.facet-list-title-name')?.textContent.trim();
+                    
+                    if (brandText && (brandText.toLowerCase() === brandName.toLowerCase() || 
+                                    brandText.toLowerCase().includes(brandName.toLowerCase()) ||
+                                    brandName.toLowerCase().includes(brandText.toLowerCase()))) {
+                      console.log(`[Content Script] Found brand in modal: ${brandText}`);
+                      
+                      if (!input.checked) {
+                        console.log(`[Content Script] Clicking brand checkbox in modal`);
+                        input.click();
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        if (input.checked) {
+                          console.log(`[Content Script] Successfully selected brand in modal: ${brandName}`);
+                          modalBrandFound = true;
+                          
+                          // Click the Apply button - use specific selectors for AJIO brand modal
+                          const applyButton = modal.querySelector('button.rilrtl-button--apply[aria-label="Apply"]') ||
+                                            modal.querySelector('.apply-popup-button.rilrtl-button--filter-footer-action') ||
+                                            modal.querySelector('.rilrtl-button.apply-popup-button') ||
+                                            modal.querySelector('button[aria-label="Apply"]') ||
+                                            modal.querySelector('button[type="submit"]');
+                          
+                          if (applyButton) {
+                            console.log(`[Content Script] Clicking Apply button in modal`);
+                            applyButton.click();
+                            await new Promise(resolve => setTimeout(resolve, 4000)); // Wait for modal to close and filter to apply
+                            
+                            appliedCount++;
+                            successfulBrands.push(brandName);
+                            brandApplied = true;
+                            console.log(`[Content Script] Successfully applied brand from modal: ${brandName}`);
+                          } else {
+                            console.error(`[Content Script] Apply button not found in modal`);
+                            // Try to close modal anyway
+                            const closeButton = document.querySelector('#closeBtn') || 
+                                               modal.querySelector('[aria-label="close icon"]');
+                            if (closeButton) {
+                              closeButton.click();
+                              await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                          }
+                        }
+                      } else {
+                        console.log(`[Content Script] Brand already selected in modal: ${brandName}`);
+                        // Click Apply anyway to close modal
+                        const applyButton = modal.querySelector('button.rilrtl-button--apply[aria-label="Apply"]') ||
+                                          modal.querySelector('.apply-popup-button.rilrtl-button--filter-footer-action') ||
+                                          modal.querySelector('.rilrtl-button.apply-popup-button') ||
+                                          modal.querySelector('button[aria-label="Apply"]') ||
+                                          modal.querySelector('button[type="submit"]');
+                        if (applyButton) {
+                          applyButton.click();
+                          await new Promise(resolve => setTimeout(resolve, 2000));
+                        }
+                        appliedCount++;
+                        successfulBrands.push(brandName);
+                        brandApplied = true;
+                      }
+                      break;
+                    }
+                  }
+                  
+                  if (!modalBrandFound) {
+                    console.warn(`[Content Script] Brand not found in modal either: ${brandName}`);
+                    // Close modal by clicking close button
+                    const closeButton = document.querySelector('#closeBtn') || 
+                                       modal.querySelector('[aria-label="close icon"]') ||
+                                       document.querySelector('.ic-close-quickview');
+                    if (closeButton) {
+                      console.log(`[Content Script] Closing modal - brand not found`);
+                      closeButton.click();
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                  }
+                } else {
+                  console.error(`[Content Script] Modal did not open for brand filters`);
+                }
+              } else {
+                console.warn(`[Content Script] MORE button not found for brands`);
+              }
+            }
+          } else {
+            console.error(`[Content Script] Brand facet section not found`);
+          }
+        }
+        
+        if (brandApplied) {
+          break; // Exit retry loop if successful
+        }
+        
+      } catch (error) {
+        console.error(`[Content Script] Error applying brand filter ${brandName} (attempt ${attempt}):`, error);
+        if (attempt < 3) {
+          console.log(`[Content Script] Retrying brand ${brandName} in 2 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
-    } catch (error) {
-      console.error(`[Content Script] Error applying brand filter ${brandName}:`, error);
-      // Continue with next brand instead of breaking
+    }
+    
+    if (!brandApplied) {
+      console.error(`[Content Script] Failed to apply brand filter after 3 attempts: ${brandName}`);
+    }
+    
+    // Wait between different brands to avoid overwhelming the page
+    if (brands.indexOf(brand) < brands.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
   
-  console.log(`[Content Script] Successfully applied ${appliedCount} out of ${brands.length} brand filters`);
-  return appliedCount > 0;
+  console.log(`[Content Script] Brand filter results: ${appliedCount}/${brands.length} applied successfully`);
+  console.log(`[Content Script] Successfully applied brands:`, successfulBrands);
+  
+  return {
+    success: appliedCount > 0,
+    appliedCount,
+    totalCount: brands.length,
+    appliedFilters: successfulBrands,
+    failedFilters: brands.filter(b => !successfulBrands.includes(typeof b === 'string' ? b : b.text))
+  };
 }
 
-// Update applyColorFilters to handle multiple colors better
+// Update applyColorFilters with similar improvements
 async function applyColorFilters(colors, site) {
   console.log(`[Content Script] Applying color filters:`, colors);
   let appliedCount = 0;
+  let successfulColors = [];
   
   for (const color of colors) {
     let colorValue = typeof color === 'string' ? color : color.text;
     console.log(`[Content Script] Attempting to apply color filter: ${colorValue}`);
     
-    try {
-      if (site === 'myntra') {
-        // Find and click the color filter in the vertical filters
-        const colorFilter = document.querySelector('.vertical-filters-filters .vertical-filters-header');
-        if (colorFilter) {
-          console.log("[Content Script] Found color filter");
-          
-          // Find and select the color in the filter options
+    let colorApplied = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`[Content Script] Color "${colorValue}" - Attempt ${attempt}/3`);
+        
+        if (site === 'myntra') {
+          // Check if color is already applied first
+          const filterList = document.querySelector('.filter-summary-filterList');
+          if (filterList) {
+            const existingFilter = Array.from(filterList.querySelectorAll('.filter-summary-filter'))
+              .find(filter => filter.textContent.trim().toLowerCase() === colorValue.toLowerCase());
+            
+            if (existingFilter) {
+              console.log(`[Content Script] Color already applied: ${colorValue}`);
+              appliedCount++;
+              successfulColors.push(colorValue);
+              colorApplied = true;
+              break;
+            }
+          }
+
+          // First try to find color in the main visible list
           const colorOptions = document.querySelectorAll('.colour-listItem label');
           let colorFound = false;
           
           for (const option of colorOptions) {
             const optionText = option.textContent.trim().toLowerCase();
-            if (optionText.includes(colorValue.toLowerCase())) {
-              console.log("[Content Script] Found matching color option, clicking");
+            const colorNameLower = colorValue.toLowerCase();
+            
+            // Extract just the color name (remove count numbers in parentheses)
+            const cleanOptionText = optionText.replace(/\s*\(\d+\)\s*$/, '').trim();
+            
+            // Use exact matching for colors
+            if (cleanOptionText === colorNameLower) {
+              console.log(`[Content Script] Found exact match for color: ${colorValue}`);
               const checkbox = option.querySelector('input[type="checkbox"]');
               if (checkbox && !checkbox.checked) {
                 checkbox.click();
-                colorFound = true;
-                appliedCount++;
                 await new Promise(resolve => setTimeout(resolve, 500));
+                console.log(`[Content Script] Applied color: ${colorValue}`);
+                  appliedCount++;
+                  successfulColors.push(colorValue);
+                  colorApplied = true;
+                colorFound = true;
                 break;
+              }
+            }
+          }
+          
+          // If not found in main list, try the "Show More" functionality
+          if (!colorFound) {
+            console.log(`[Content Script] Color not found in main list, trying Show More: ${colorValue}`);
+            const moreButton = document.querySelector('.colour-more');
+            if (moreButton) {
+              console.log(`[Content Script] Clicking Show More button for colors`);
+              moreButton.click();
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // Now search in the expanded list
+              const expandedColorOptions = document.querySelectorAll('.colour-listItem label');
+              console.log(`[Content Script] Found ${expandedColorOptions.length} color options after expanding`);
+              
+              for (const option of expandedColorOptions) {
+                const optionText = option.textContent.trim().toLowerCase();
+                const colorNameLower = colorValue.toLowerCase();
+                
+                // Extract just the color name (remove count numbers in parentheses)
+                const cleanOptionText = optionText.replace(/\s*\(\d+\)\s*$/, '').trim();
+                
+                // Use exact matching for colors
+                if (cleanOptionText === colorNameLower) {
+                  console.log(`[Content Script] Found exact match for color in expanded list: ${colorValue}`);
+                  const checkbox = option.querySelector('input[type="checkbox"]');
+                  if (checkbox && !checkbox.checked) {
+                    checkbox.click();
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    console.log(`[Content Script] Applied color from expanded list: ${colorValue}`);
+                appliedCount++;
+                successfulColors.push(colorValue);
+                colorApplied = true;
+                    colorFound = true;
+                break;
+                  }
+                }
               }
             }
           }
           
           if (!colorFound) {
             console.warn(`[Content Script] Color option not found: ${colorValue}`);
-          }
-        } else {
-          console.warn("[Content Script] Color filter not found in vertical filters");
-        }
-      } 
-      else if (site === 'ajio') {
-        // First try to find the color in the breadcrumb container
-        const appliedFilters = document.querySelector('.fnl-plp-appliedFliters');
-        if (appliedFilters) {
-          const colorFilter = Array.from(appliedFilters.querySelectorAll('.fnl-plp-afliter'))
-            .find(filter => filter.querySelector('.pull-left').textContent.trim() === colorValue);
-          
-          if (colorFilter) {
-            console.log("[Content Script] Color already applied:", colorValue);
-            appliedCount++;
-            continue;
+            failedColors.push(colorValue);
           }
         }
-
-        // Try to find and click the color facet to open the modal
-        const colorFacet = document.querySelector('.cat-facets .facet-left-pane-label[aria-label="colors"]');
-        if (colorFacet) {
-          console.log("[Content Script] Found color facet, clicking to expand");
-          colorFacet.closest('.facet-head').click();
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // Look for the color in the modal
-          const colorModal = document.querySelector('.more-popup-container');
-          if (colorModal) {
-            console.log("[Content Script] Found color modal");
+        else if (site === 'ajio') {
+          // Check existing filters
+          const appliedFilters = document.querySelector('.fnl-plp-appliedFliters');
+          if (appliedFilters) {
+            const existingFilter = Array.from(appliedFilters.querySelectorAll('.fnl-plp-afliter'))
+              .find(filter => filter.querySelector('.pull-left').textContent.trim() === colorValue);
             
-            // Find the color checkbox in the modal
-            const colorCheckbox = Array.from(colorModal.querySelectorAll('input[name="verticalcolorfamily"]'))
-              .find(input => {
-                const label = input.closest('label');
-                const colorName = label.querySelector('.facet-list-title-name')?.textContent.trim();
-                return colorName && colorName.toLowerCase() === colorValue.toLowerCase();
-              });
-
-            if (colorCheckbox) {
-              console.log(`[Content Script] Found color checkbox for: ${colorValue}`);
-              
-              // Click the checkbox if not already checked
-              if (!colorCheckbox.checked) {
-                colorCheckbox.click();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Click the Apply button in the modal
-                const applyButton = colorModal.querySelector('.apply-popup-button');
-                if (applyButton) {
-                  console.log("[Content Script] Clicking Apply button in color modal");
-                  applyButton.click();
-                  appliedCount++;
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-              } else {
-                console.log(`[Content Script] Color ${colorValue} already checked`);
-                appliedCount++;
-              }
-            } else {
-              console.warn(`[Content Script] Color option not found in modal: ${colorValue}`);
+            if (existingFilter) {
+              console.log(`[Content Script] Color already applied: ${colorValue}`);
+              appliedCount++;
+              successfulColors.push(colorValue);
+              colorApplied = true;
+              break;
             }
-          } else {
-            // If modal not found, try the regular color options
+          }
+
+          // Apply color filter
+          const colorFacet = document.querySelector('.cat-facets .facet-left-pane-label[aria-label="colors"]');
+          if (colorFacet) {
+            console.log(`[Content Script] Expanding color facet for: ${colorValue}`);
+            colorFacet.closest('.facet-head').click();
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // First try to find color in the main visible list
             const colorOptions = document.querySelectorAll('.facet-linkname-verticalcolorfamily');
             let colorFound = false;
             
             for (const option of colorOptions) {
-              const optionText = option.textContent.trim().toLowerCase();
-              if (optionText.includes(colorValue.toLowerCase())) {
-                console.log("[Content Script] Found matching color option, clicking");
+              const optionText = option.textContent.trim();
+              // Extract just the color name (remove count numbers in parentheses)
+              const cleanOptionText = optionText.replace(/\s*\(\d+\)\s*$/, '').trim();
+              
+              // Use exact matching for colors
+              if (cleanOptionText.toLowerCase() === colorValue.toLowerCase()) {
+                console.log(`[Content Script] Found exact match for color: ${colorValue}`);
                 const checkbox = option.closest('.facet-linkfref').querySelector('input[type="checkbox"]');
-                if (checkbox && !checkbox.checked) {
-                  checkbox.click();
-                  colorFound = true;
-                  appliedCount++;
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  break;
+                if (checkbox) {
+                  if (!checkbox.checked) {
+                    // Color not selected, click to select it
+                    checkbox.click();
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    console.log(`[Content Script] Applied color: ${colorValue}`);
+                    appliedCount++;
+                    successfulColors.push(colorValue);
+                    colorApplied = true;
+                    colorFound = true;
+                    break;
+                  } else {
+                    // Color already selected
+                    console.log(`[Content Script] Color already applied: ${colorValue}`);
+                    appliedCount++;
+                    successfulColors.push(colorValue);
+                    colorApplied = true;
+                    colorFound = true;
+                    break;
+                  }
                 }
               }
             }
             
+            // If not found in main list, try the "Show More" modal
             if (!colorFound) {
-              console.warn(`[Content Script] Color option not found: ${colorValue}`);
+              console.log(`[Content Script] Color not found in main list, trying Show More: ${colorValue}`);
+              const moreButton = document.querySelector('#verticalsizegroupformat-verticalcolorfamily.facet-more');
+              if (moreButton) {
+                console.log(`[Content Script] Clicking Show More button for colors`);
+                moreButton.click();
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Wait for modal to appear
+            const colorModal = document.querySelector('.more-popup-container');
+            if (colorModal) {
+                  console.log(`[Content Script] Color modal opened, searching for: ${colorValue}`);
+                  
+                  // Find the color in the modal
+                  const modalColorInputs = colorModal.querySelectorAll('input[name="verticalcolorfamily"]');
+                  let modalColorFound = false;
+                  
+                  for (const input of modalColorInputs) {
+                  const label = input.closest('label');
+                    const colorName = label?.querySelector('.facet-list-title-name')?.textContent.trim();
+                    
+                    if (colorName) {
+                      // Use exact matching for colors
+                      if (colorName.toLowerCase() === colorValue.toLowerCase()) {
+                        console.log(`[Content Script] Found exact match for color in modal: ${colorValue}`);
+                        
+                        if (!input.checked) {
+                          input.click();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                          // Click the Apply button - use specific selectors for AJIO color modal
+                          const applyButton = colorModal.querySelector('button.rilrtl-button--apply[aria-label="Apply"]') ||
+                                            colorModal.querySelector('.apply-popup-button.rilrtl-button--filter-footer-action') ||
+                                            colorModal.querySelector('.rilrtl-button.apply-popup-button') ||
+                                            colorModal.querySelector('button[aria-label="Apply"]') ||
+                                            colorModal.querySelector('button[type="submit"]');
+                          
+                if (applyButton) {
+                            console.log(`[Content Script] Clicking Apply button in color modal`);
+                  applyButton.click();
+                            await new Promise(resolve => setTimeout(resolve, 4000)); // Wait for modal to close and filter to apply
+                            
+                  appliedCount++;
+                  successfulColors.push(colorValue);
+                  colorApplied = true;
+                            modalColorFound = true;
+                            break;
+              }
+            } else {
+                          console.log(`[Content Script] Color already selected in modal: ${colorValue}`);
+                          // Click Apply anyway to close modal
+                          const applyButton = colorModal.querySelector('button.rilrtl-button--apply[aria-label="Apply"]') ||
+                                            colorModal.querySelector('.apply-popup-button.rilrtl-button--filter-footer-action') ||
+                                            colorModal.querySelector('.rilrtl-button.apply-popup-button') ||
+                                            colorModal.querySelector('button[aria-label="Apply"]') ||
+                                            colorModal.querySelector('button[type="submit"]');
+                          if (applyButton) {
+                            applyButton.click();
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                          }
+                    appliedCount++;
+                    successfulColors.push(colorValue);
+                    colorApplied = true;
+                          modalColorFound = true;
+                    break;
+                  }
+                }
+                    }
+                  }
+                  
+                  if (!modalColorFound) {
+                    console.warn(`[Content Script] Color not found in modal: ${colorValue}`);
+                    // Close modal if color not found
+                    const closeButton = colorModal.querySelector('#closeBtn, .ic-close-quickview');
+                    if (closeButton) {
+                      closeButton.click();
+                      await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                  }
+                } else {
+                  console.warn(`[Content Script] Color modal did not open for: ${colorValue}`);
+                }
+              } else {
+                console.warn(`[Content Script] Show More button not found for colors`);
+              }
             }
           }
-        } else {
-          console.warn("[Content Script] Color facet not found");
+        }
+        
+        if (colorApplied) {
+          break;
+        }
+        
+      } catch (error) {
+        console.error(`[Content Script] Error applying color filter ${colorValue} (attempt ${attempt}):`, error);
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
-    } catch (error) {
-      console.error(`[Content Script] Error applying color filter ${colorValue}:`, error);
-      // Continue with next color instead of breaking
+    }
+    
+    if (!colorApplied) {
+      console.error(`[Content Script] Failed to apply color filter after 3 attempts: ${colorValue}`);
+    }
+    
+    if (colors.indexOf(color) < colors.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
   
-  console.log(`[Content Script] Successfully applied ${appliedCount} out of ${colors.length} color filters`);
-  return appliedCount > 0;
+  console.log(`[Content Script] Color filter results: ${appliedCount}/${colors.length} applied successfully`);
+  console.log(`[Content Script] Successfully applied colors:`, successfulColors);
+  
+  return {
+    success: appliedCount > 0,
+    appliedCount,
+    totalCount: colors.length,
+    appliedFilters: successfulColors,
+    failedFilters: colors.filter(c => !successfulColors.includes(typeof c === 'string' ? c : c.text))
+  };
 }
 
-// Update applySizeFilters to handle multiple sizes better
+// Update applySizeFilters with similar improvements
 async function applySizeFilters(sizes, site) {
   console.log(`[Content Script] Applying size filters:`, sizes);
   let appliedCount = 0;
+  let successfulSizes = [];
   
   for (const size of sizes) {
     let sizeValue = typeof size === 'string' ? size : size.text;
     console.log(`[Content Script] Attempting to apply size filter: ${sizeValue}`);
     
-    try {
-      if (site === 'myntra') {
-        // Find and click the size filter in the horizontal filters
-        const sizeFilter = document.querySelector('.atsa-filters li label input[value="size_facet"]');
-        if (sizeFilter) {
-          console.log("[Content Script] Found size filter, clicking to expand");
-          sizeFilter.click();
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Find and select the size in the filter options
-          const sizeOptions = document.querySelectorAll('.atsa-values label');
-          let sizeFound = false;
-          
-          for (const option of sizeOptions) {
-            const optionText = option.textContent.trim().toLowerCase();
-            if (optionText === sizeValue.toLowerCase()) {
-              console.log("[Content Script] Found matching size option, clicking");
-              const checkbox = option.querySelector('input[type="checkbox"]');
-              if (checkbox && !checkbox.checked) {
-                checkbox.click();
-                sizeFound = true;
-                appliedCount++;
-                await new Promise(resolve => setTimeout(resolve, 500));
-                break;
-              }
+    let sizeApplied = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`[Content Script] Size "${sizeValue}" - Attempt ${attempt}/3`);
+        
+        if (site === 'myntra') {
+          // Check existing size filters
+          const filterList = document.querySelector('.filter-summary-filterList');
+          if (filterList) {
+            const existingFilter = Array.from(filterList.querySelectorAll('.filter-summary-filter'))
+              .find(filter => {
+                const filterInput = filter.querySelector('input[type="checkbox"]');
+                return filterInput?.dataset.group === 'size_facet' && 
+                       filter.textContent.trim().includes(sizeValue);
+              });
+            
+            if (existingFilter) {
+              console.log(`[Content Script] Size already applied: ${sizeValue}`);
+              appliedCount++;
+              successfulSizes.push(sizeValue);
+              sizeApplied = true;
+              break;
             }
           }
-          
-          if (!sizeFound) {
-            console.warn(`[Content Script] Size option not found: ${sizeValue}`);
-          }
-        } else {
-          console.warn("[Content Script] Size filter not found in horizontal filters");
-        }
-      } 
-      else if (site === 'ajio') {
-        // First try to find the size in the breadcrumb container
-        const appliedFilters = document.querySelector('.fnl-plp-appliedFliters');
-        if (appliedFilters) {
-          const sizeFilter = Array.from(appliedFilters.querySelectorAll('.fnl-plp-afliter'))
-            .find(filter => filter.querySelector('.pull-left').textContent.trim() === sizeValue);
-          
-          if (sizeFilter) {
-            console.log("[Content Script] Size already applied:", sizeValue);
-            appliedCount++;
-            continue;
-          }
-        }
 
-        // If not found in breadcrumb, try to apply through facet list
-        const sizeFacet = document.querySelector('.cat-facets .facet-left-pane-label[aria-label="size & fit"]');
-        if (sizeFacet) {
-          console.log("[Content Script] Found size facet, clicking to expand");
-          sizeFacet.closest('.facet-head').click();
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Find and select the size in the facet list
-          const sizeOptions = document.querySelectorAll('.facet-linkname-verticalsizegroupformat');
-          let sizeFound = false;
-          
-          for (const option of sizeOptions) {
-            const optionText = option.textContent.trim().toLowerCase();
-            if (optionText.includes(sizeValue.toLowerCase())) {
-              console.log("[Content Script] Found matching size option, clicking");
-              const checkbox = option.closest('.facet-linkfref').querySelector('input[type="checkbox"]');
-              if (checkbox && !checkbox.checked) {
-                checkbox.click();
-                sizeFound = true;
-                appliedCount++;
-                await new Promise(resolve => setTimeout(resolve, 500));
-                break;
+          // Apply size filter through horizontal filters
+          const sizeFilter = document.querySelector('.atsa-filters li label input[value="size_facet"]');
+          if (sizeFilter) {
+            console.log(`[Content Script] Expanding size filter for: ${sizeValue}`);
+            sizeFilter.click();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const sizeOptions = document.querySelectorAll('.atsa-values label');
+            let sizeFound = false;
+            
+            for (const option of sizeOptions) {
+              const optionText = option.textContent.trim().toLowerCase();
+              if (optionText === sizeValue.toLowerCase()) {
+                console.log(`[Content Script] Found matching size option: ${optionText}`);
+                const checkbox = option.querySelector('input[type="checkbox"]');
+                if (checkbox && !checkbox.checked) {
+                  checkbox.click();
+                  sizeFound = true;
+                  
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  
+                  if (checkbox.checked) {
+                    console.log(`[Content Script] Successfully applied size: ${sizeValue}`);
+                    appliedCount++;
+                    successfulSizes.push(sizeValue);
+                    sizeApplied = true;
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                  }
+                  break;
+                } else if (checkbox && checkbox.checked) {
+                  appliedCount++;
+                  successfulSizes.push(sizeValue);
+                  sizeApplied = true;
+                  break;
+                }
+              }
+            }
+            
+            if (!sizeFound) {
+              console.warn(`[Content Script] Size option not found: ${sizeValue}`);
+            }
+          }
+        }
+        else if (site === 'ajio') {
+          // Similar logic for AJIO sizes
+          const appliedFilters = document.querySelector('.fnl-plp-appliedFliters');
+          if (appliedFilters) {
+            const existingFilter = Array.from(appliedFilters.querySelectorAll('.fnl-plp-afliter'))
+              .find(filter => filter.querySelector('.pull-left').textContent.trim() === sizeValue);
+            
+            if (existingFilter) {
+              console.log(`[Content Script] Size already applied: ${sizeValue}`);
+              appliedCount++;
+              successfulSizes.push(sizeValue);
+              sizeApplied = true;
+              break;
+            }
+          }
+
+          const sizeFacet = document.querySelector('.cat-facets .facet-left-pane-label[aria-label="size & fit"]');
+          if (sizeFacet) {
+            console.log(`[Content Script] Expanding size facet for: ${sizeValue}`);
+            sizeFacet.closest('.facet-head').click();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const sizeOptions = document.querySelectorAll('.facet-linkname-verticalsizegroupformat');
+            for (const option of sizeOptions) {
+              const optionText = option.textContent.trim();
+              // Extract just the size value (remove count numbers in parentheses)
+              const cleanOptionText = optionText.replace(/\s*\(\d+\)\s*$/, '').trim();
+              
+              // Use exact matching for sizes to prevent "L" from matching "XL"
+              if (cleanOptionText === sizeValue) {
+                console.log(`[Content Script] Found exact match for size: ${sizeValue}`);
+                const checkbox = option.closest('.facet-linkfref').querySelector('input[type="checkbox"]');
+                if (checkbox && !checkbox.checked) {
+                  checkbox.click();
+                  appliedCount++;
+                  successfulSizes.push(sizeValue);
+                  sizeApplied = true;
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  break;
+                }
               }
             }
           }
-          
-          if (!sizeFound) {
-            console.warn(`[Content Script] Size option not found: ${sizeValue}`);
-          }
-        } else {
-          console.warn("[Content Script] Size facet not found");
+        }
+        
+        if (sizeApplied) {
+          break;
+        }
+        
+      } catch (error) {
+        console.error(`[Content Script] Error applying size filter ${sizeValue} (attempt ${attempt}):`, error);
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
-    } catch (error) {
-      console.error(`[Content Script] Error applying size filter ${sizeValue}:`, error);
-      // Continue with next size instead of breaking
+    }
+    
+    if (!sizeApplied) {
+      console.error(`[Content Script] Failed to apply size filter after 3 attempts: ${sizeValue}`);
+    }
+    
+    if (sizes.indexOf(size) < sizes.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
   
-  console.log(`[Content Script] Successfully applied ${appliedCount} out of ${sizes.length} size filters`);
-  return appliedCount > 0;
+  console.log(`[Content Script] Size filter results: ${appliedCount}/${sizes.length} applied successfully`);
+  console.log(`[Content Script] Successfully applied sizes:`, successfulSizes);
+  
+  return {
+    success: appliedCount > 0,
+    appliedCount,
+    totalCount: sizes.length,
+    appliedFilters: successfulSizes,
+    failedFilters: sizes.filter(s => !successfulSizes.includes(typeof s === 'string' ? s : s.text))
+  };
 }
 
 // Myntra-specific functions
@@ -832,10 +1510,43 @@ async function getMyntraFilters() {
       const filterType = filterInput?.dataset.group;
       
       if (filterType === 'Brand') {
-        // For brand filters, get the text content
-        const brandText = item.textContent.trim();
-        if (brandText) {
+        // For brand filters, get the text content more precisely
+        // Try to get the brand name from the label or span, excluding the remove button
+        let brandText = '';
+        
+        // Method 1: Try to get from the label text
+        const label = item.querySelector('label');
+        if (label) {
+          // Get text nodes only, excluding child elements like the remove button
+          const textNodes = Array.from(label.childNodes)
+            .filter(node => node.nodeType === Node.TEXT_NODE)
+            .map(node => node.textContent.trim())
+            .join(' ')
+            .trim();
+          if (textNodes) {
+            brandText = textNodes;
+          }
+        }
+        
+        // Method 2: If no label, try to get from span or direct text
+        if (!brandText) {
+          const span = item.querySelector('span:not(.filter-summary-close)');
+          if (span) {
+            brandText = span.textContent.trim();
+          }
+        }
+        
+        // Method 3: Fallback to full text content but clean it
+        if (!brandText) {
+          brandText = item.textContent.trim()
+            .replace(/×/g, '') // Remove close button
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim();
+        }
+        
+        if (brandText && !filters.brands.includes(brandText)) {
           filters.brands.push(brandText);
+          console.log(`[Content Script] Added brand from filter summary: ${brandText}`);
         }
       } else if (filterType === 'Color') {
         // For color filters, get the text after the color box
@@ -857,12 +1568,13 @@ async function getMyntraFilters() {
     }
   }
 
-  // Also check for brand filters in the vertical filters
+  // Also check for brand filters in the vertical filters (as backup)
   const brandCheckboxes = document.querySelectorAll('.brand-list input[type="checkbox"]:checked');
   for (const checkbox of brandCheckboxes) {
     const brandText = checkbox.value;
     if (brandText && !filters.brands.includes(brandText)) {
       filters.brands.push(brandText);
+      console.log(`[Content Script] Added brand from checkbox: ${brandText}`);
     }
   }
 
@@ -929,15 +1641,22 @@ async function getAjioFilters() {
   try {
     console.log("[Content Script] Getting Ajio filters");
 
-    // Helper function to determine if a text is a size
+    // Enhanced helper function to determine if a text is a size
     const isSize = (text) => {
       // Match UK sizes
       if (text.match(/^UK \d+$/i)) return true;
       // Match standard letter sizes (S, M, L, XL, XXL, etc.)
       if (text.match(/^(XS|S|M|L|XL|XXL|XXXL|2XL|3XL|4XL|5XL)$/i)) return true;
-      // Match numeric sizes
+      // Match numeric sizes (including single and double digits)
       if (text.match(/^(\d{1,2}|one size)$/i)) return true;
+      // Match special size codes like OS (One Size), FS (Free Size), etc.
+      if (text.match(/^(OS|FS|Free Size|One Size)$/i)) return true;
       return false;
+    };
+
+    // Enhanced helper function to determine if a text is a color
+    const isColor = (text) => {
+      return text.match(/^(Black|White|Red|Blue|Green|Yellow|Beige|Brown|Grey|Pink|Purple|Orange|Navy|Maroon|Olive|Teal|Cyan|Magenta|Gold|Silver|Bronze|Multicolor|Printed|Striped|Floral|Geometric|Abstract|Animal Print|Camouflage|Tie & Dye|Ombre|Metallic|Glitter|Holographic|Neon|Pastel|Vintage|Washed|Faded|Distressed|Embellished|Sequined|Beaded|Quilted|Crochet|Knit|Woven|Denim|Leather|Suede|Velvet|Satin|Silk|Cotton|Linen|Wool|Polyester|Nylon|Spandex|Rayon|Viscose|Acrylic|Fleece|Fur|Faux Fur|Mesh|Net|Lace)$/i);
     };
 
     // Give the page time to fully render filters if they're being loaded dynamically
@@ -975,13 +1694,13 @@ async function getAjioFilters() {
               }
             }
           } else {
-            // Fallback to text-based detection
+            // Fallback to text-based detection with improved logic
             if (isSize(filterText)) {
               if (!filters.sizes.includes(filterText)) {
                 filters.sizes.push(filterText);
                 console.log(`[Content Script] Added size (by pattern): ${filterText}`);
               }
-            } else if (filterText.match(/^(Black|White|Red|Blue|Green|Yellow|Beige|Brown|Grey|Pink|Purple|Orange|Navy|Maroon|Olive|Teal|Cyan|Magenta|Gold|Silver|Bronze|Multicolor|Printed|Striped|Floral|Geometric|Abstract|Animal Print|Camouflage|Tie & Dye|Ombre|Metallic|Glitter|Holographic|Neon|Pastel|Vintage|Washed|Faded|Distressed|Embellished|Sequined|Beaded|Quilted|Crochet|Knit|Woven|Denim|Leather|Suede|Velvet|Satin|Silk|Cotton|Linen|Wool|Polyester|Nylon|Spandex|Rayon|Viscose|Acrylic|Fleece|Fur|Faux Fur|Mesh|Net|Lace)$/i)) {
+            } else if (isColor(filterText)) {
               if (!filters.colors.includes(filterText)) {
                 filters.colors.push(filterText);
                 console.log(`[Content Script] Added color (by pattern): ${filterText}`);
@@ -1004,7 +1723,23 @@ async function getAjioFilters() {
     if (filters.brands.length === 0 && filters.sizes.length === 0 && filters.colors.length === 0) {
       console.log("[Content Script] No filters found in applied filters, checking facets");
       
-      // Check for brands
+      // Check for brands - first ensure brand facet is expanded
+      const brandFacet = document.querySelector('.cat-facets .facet-left-pane-label[aria-label="brands"]');
+      if (brandFacet) {
+        console.log("[Content Script] Found brand facet, ensuring it's expanded");
+        const facetHead = brandFacet.closest('.facet-head');
+        if (facetHead) {
+          // Check if it's already expanded
+          const facetBody = facetHead.nextElementSibling;
+          if (!facetBody || facetBody.style.display === 'none' || !facetBody.querySelector('.facet-linkfref')) {
+            console.log("[Content Script] Expanding brand facet for filter detection");
+            facetHead.click();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+      }
+      
+      // Now check for brands
       const brandCheckboxes = document.querySelectorAll('input[name="brand"]:checked');
       for (const checkbox of brandCheckboxes) {
         try {
@@ -1018,14 +1753,33 @@ async function getAjioFilters() {
         }
       }
       
-      // Check for sizes - specifically look for UK sizes
+      // Also check for brands in the modal if it's open
+      const modal = document.querySelector('.modal-content .more-popup-container');
+      if (modal) {
+        console.log("[Content Script] Modal is open, checking for selected brands in modal");
+        const modalBrandInputs = modal.querySelectorAll('input[name="brand"]:checked');
+        for (const input of modalBrandInputs) {
+          try {
+            const label = input.closest('label');
+            const brandText = label?.querySelector('.facet-list-title-name')?.textContent.trim();
+            if (brandText && !filters.brands.includes(brandText)) {
+              filters.brands.push(brandText);
+              console.log(`[Content Script] Added brand from modal: ${brandText}`);
+            }
+          } catch (error) {
+            console.error("[Content Script] Error getting brand from modal checkbox:", error);
+          }
+        }
+      }
+      
+      // Check for sizes - specifically look for UK sizes and other size formats
       const sizeCheckboxes = document.querySelectorAll('input[name="verticalsizegroupformat"]:checked');
       for (const checkbox of sizeCheckboxes) {
         try {
           const label = checkbox.closest('.facet-linkfref')?.querySelector('.facet-linkname-verticalsizegroupformat')?.textContent.trim();
           if (label) {
-            // Extract just the size value (e.g., "UK 2 (61)" -> "UK 2")
-            const sizeMatch = label.match(/^(UK \d+)/i);
+            // Extract just the size value (e.g., "UK 2 (61)" -> "UK 2", "6 (45)" -> "6")
+            const sizeMatch = label.match(/^(UK \d+|\d+|OS|FS|Free Size|One Size)/i);
             if (sizeMatch && !filters.sizes.includes(sizeMatch[1])) {
               filters.sizes.push(sizeMatch[1]);
               console.log(`[Content Script] Added size from facet: ${sizeMatch[1]}`);
@@ -1089,1265 +1843,33 @@ async function resetAjioFilters() {
   await resetFilterType('input[name="verticalsizegroupformat"]');
   await resetFilterType('input[name="verticalcolorfamily"]');
   
+  // Also reset any filters in modal if it's open
+  const modal = document.querySelector('.modal-content .more-popup-container');
+  if (modal) {
+    console.log("[Content Script] Modal is open, resetting modal filters");
+    const modalCheckboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+    for (const checkbox of modalCheckboxes) {
+      try {
+        if (checkbox.checked) {
+          checkbox.click();
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      } catch (error) {
+        console.error("[Content Script] Error resetting modal filter:", error);
+      }
+    }
+    
+    // Close the modal
+    const closeButton = modal.closest('.modal-content').querySelector('#closeBtn');
+    if (closeButton) {
+      console.log("[Content Script] Closing modal after reset");
+      closeButton.click();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
   console.log("[Content Script] Reset complete");
   await new Promise(resolve => setTimeout(resolve, 500));
-}
-
-// Amazon.in-specific functions
-async function applyAmazonFilters(filters) {
-  console.log("[Content Script] Applying Amazon filters:", filters);
-  
-  try {
-    // Normalize filter values - handle both string and object formats
-    const normalizedFilters = {
-      brands: (filters.brands || []).map(b => typeof b === 'string' ? b : b.text || b.value || b),
-      sizes: (filters.sizes || []).map(s => typeof s === 'string' ? s : s.text || s.value || s),
-      colors: (filters.colors || []).map(c => typeof c === 'string' ? c : c.text || c.value || c)
-    };
-    
-    console.log("[Content Script] Normalized filters:", normalizedFilters);
-    
-    // Helper function to wait for element and click
-    const waitAndClick = async (element, description) => {
-      if (!element) {
-        console.warn(`[Content Script] ${description} not found`);
-        return false;
-      }
-      
-      try {
-        // Scroll element into view
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Click the element
-        element.click();
-        console.log(`[Content Script] Clicked ${description}`);
-        // Reduced delay after clicking
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        return true;
-      } catch (error) {
-        console.error(`[Content Script] Error clicking ${description}:`, error);
-        return false;
-      }
-    };
-
-    // Track successfully applied filters
-    let appliedFilters = {
-      brands: [],
-      sizes: [],
-      colors: []
-    };
-
-    // Helper function for fuzzy matching
-    const fuzzyMatch = (value, candidate) => {
-      if (!value || !candidate) return false;
-      
-      const valueNormalized = value.toLowerCase().trim();
-      const candidateNormalized = candidate.toLowerCase().trim();
-      
-      return valueNormalized.includes(candidateNormalized) || 
-             candidateNormalized.includes(valueNormalized) ||
-             valueNormalized.split(' ').some(word => 
-               candidateNormalized.includes(word) && word.length > 3
-             );
-    };
-
-    // Helper function to verify if a filter is currently applied
-    const isFilterApplied = async (filterType, value) => {
-      try {
-        const currentFilters = await getAmazonFilters();
-        return currentFilters[filterType].some(f => fuzzyMatch(f, value));
-      } catch (error) {
-        console.error(`[Content Script] Error verifying ${filterType} filter:`, error);
-        return false;
-      }
-    };
-
-    // Apply brand filters first
-    if (normalizedFilters.brands.length > 0) {
-      console.log("[Content Script] Starting brand filter application");
-      
-      for (const brand of normalizedFilters.brands) {
-        // Skip if brand is already applied
-        if (await isFilterApplied('brands', brand)) {
-          console.log(`[Content Script] Brand ${brand} is already applied, skipping`);
-          appliedFilters.brands.push(brand);
-          continue;
-        }
-
-        console.log(`[Content Script] Looking for brand: ${brand}`);
-        const brandLinks = Array.from(document.querySelectorAll('#filter-p_123 .a-link-normal.s-navigation-item'));
-        const brandMatches = brandLinks.filter(link => {
-          const brandText = link.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-          return brandText && fuzzyMatch(brandText, brand);
-        });
-        
-        if (brandMatches.length > 0) {
-          const brandLink = brandMatches[0];
-          const brandText = brandLink.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-          
-          const success = await waitAndClick(brandLink, `brand filter: ${brandText}`);
-          if (success && await isFilterApplied('brands', brand)) {
-            appliedFilters.brands.push(brand);
-            console.log(`[Content Script] Successfully applied brand filter: ${brand}`);
-          }
-        }
-      }
-    }
-
-    // Apply color filters next
-    if (normalizedFilters.colors.length > 0) {
-      console.log("[Content Script] Starting color filter application");
-      
-      for (const color of normalizedFilters.colors) {
-        // Skip if color is already applied
-        if (await isFilterApplied('colors', color)) {
-          console.log(`[Content Script] Color ${color} is already applied, skipping`);
-          appliedFilters.colors.push(color);
-          continue;
-        }
-
-        console.log(`[Content Script] Looking for color: ${color}`);
-        const colorLinks = Array.from(document.querySelectorAll('#filter-p_n_size_two_browse-vebin .a-link-normal.s-navigation-item'));
-        const colorMatches = colorLinks.filter(link => {
-          const titleText = link.getAttribute('title');
-          const visibleText = link.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-          return (titleText && fuzzyMatch(titleText, color)) || 
-                 (visibleText && fuzzyMatch(visibleText, color));
-        });
-        
-        if (colorMatches.length > 0) {
-          const colorLink = colorMatches[0];
-          const colorText = colorLink.getAttribute('title') || 
-                          colorLink.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-          
-          const success = await waitAndClick(colorLink, `color filter: ${colorText}`);
-          if (success && await isFilterApplied('colors', color)) {
-            appliedFilters.colors.push(color);
-            console.log(`[Content Script] Successfully applied color filter: ${color}`);
-          }
-        }
-      }
-    }
-
-    // Apply size filters last, with limited retries
-    if (normalizedFilters.sizes.length > 0) {
-      console.log("[Content Script] Starting size filter application");
-      
-      for (const size of normalizedFilters.sizes) {
-        // Skip if size is already applied
-        if (await isFilterApplied('sizes', size)) {
-          console.log(`[Content Script] Size ${size} is already applied, skipping`);
-          appliedFilters.sizes.push(size);
-          continue;
-        }
-
-        console.log(`[Content Script] Looking for size: ${size}`);
-        let attempts = 0;
-        const maxAttempts = 5;
-        let sizeApplied = false;
-
-        while (attempts < maxAttempts && !sizeApplied) {
-          const sizeLinks = Array.from(document.querySelectorAll('#filter-p_n_size_browse-vebin .a-link-normal.s-navigation-item'));
-          const sizeMatches = sizeLinks.filter(link => {
-            const sizeText = link.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-            return sizeText && fuzzyMatch(sizeText, size);
-          });
-          
-          if (sizeMatches.length > 0) {
-            const sizeLink = sizeMatches[0];
-            const sizeText = sizeLink.querySelector('.a-size-base.a-color-base')?.textContent.trim();
-            
-            const success = await waitAndClick(sizeLink, `size filter: ${sizeText}`);
-            if (success && await isFilterApplied('sizes', size)) {
-              appliedFilters.sizes.push(size);
-              console.log(`[Content Script] Successfully applied size filter: ${size}`);
-              sizeApplied = true;
-              break;
-            }
-          }
-          
-          attempts++;
-          if (!sizeApplied) {
-            console.log(`[Content Script] Attempt ${attempts}/${maxAttempts} failed for size: ${size}`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-
-        if (!sizeApplied) {
-          console.warn(`[Content Script] Size ${size} not found after ${maxAttempts} attempts. This size may not be available.`);
-        }
-      }
-    }
-
-    // Calculate success metrics
-    const totalRequested = normalizedFilters.brands.length + normalizedFilters.colors.length + normalizedFilters.sizes.length;
-    const totalApplied = appliedFilters.brands.length + appliedFilters.colors.length + appliedFilters.sizes.length;
-    const isPartialSuccess = totalApplied > 0 && totalApplied < totalRequested;
-
-    console.log("[Content Script] Filter application complete:", {
-      requested: {
-        brands: normalizedFilters.brands,
-        colors: normalizedFilters.colors,
-        sizes: normalizedFilters.sizes
-      },
-      applied: appliedFilters,
-      success: totalApplied > 0,
-      partialSuccess: isPartialSuccess
-    });
-
-    return {
-      success: totalApplied > 0,
-      appliedFilters,
-      partialSuccess: isPartialSuccess
-    };
-  } catch (error) {
-    console.error("[Content Script] Error applying Amazon filters:", error);
-    throw error;
-  }
-}
-
-// Flipkart-specific functions
-async function getFlipkartFilters() {
-  const filters = {
-    brands: [],
-    sizes: [],
-    colors: []
-  };
-
-  // First check the summary section for applied filters
-  const summarySection = document.querySelector('section[class*="pgRLLn"]');
-  if (summarySection) {
-    const appliedFilters = summarySection.querySelectorAll('.YcSYyC');
-    for (const filter of appliedFilters) {
-      const filterText = filter.querySelector('._6tw8ju')?.textContent.trim();
-      if (filterText) {
-        // Try to determine filter type based on the text
-        if (filterText.match(/^(XS|S|M|L|XL|XXL|\d+(\.\d+)?)$/i)) {
-          filters.sizes.push(filterText);
-        } else if (filterText.match(/^(Black|White|Red|Blue|Green|Yellow|Beige|Brown|Grey|Pink|Purple|Orange|Navy|Maroon|Olive|Teal|Cyan|Magenta|Gold|Silver|Bronze|Multicolor|Printed|Striped|Floral|Geometric|Abstract|Animal Print|Camouflage|Tie & Dye|Ombre|Metallic|Glitter|Holographic|Neon|Pastel|Vintage|Washed|Faded|Distressed|Embellished|Sequined|Beaded|Quilted|Crochet|Knit|Woven|Denim|Leather|Suede|Velvet|Satin|Silk|Cotton|Linen|Wool|Polyester|Nylon|Spandex|Rayon|Viscose|Acrylic|Fleece|Fur|Faux Fur|Mesh|Net|Lace|Crochet|Knit|Woven|Denim|Leather|Suede|Velvet|Satin|Silk|Cotton|Linen|Wool|Polyester|Nylon|Spandex|Rayon|Viscose|Acrylic|Fleece|Fur|Faux Fur|Mesh|Net|Lace)$/i)) {
-          filters.colors.push(filterText);
-        } else {
-          // Assume it's a brand if it doesn't match size or color patterns
-          filters.brands.push(filterText);
-        }
-      }
-    }
-  }
-
-  // If no filters found in summary, check individual sections
-  if (filters.brands.length === 0 && filters.sizes.length === 0 && filters.colors.length === 0) {
-    // Get selected brands
-    const brandSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-      .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Brand'));
-    
-    if (brandSection) {
-      const brandLabels = brandSection.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
-      for (const label of brandLabels) {
-        const checkbox = label.querySelector('input[type="checkbox"]');
-        if (checkbox && checkbox.checked) {
-          const brandText = label.querySelector('[class*="_6i1qKy"]')?.textContent.trim();
-          if (brandText) {
-            filters.brands.push(brandText);
-          }
-        }
-      }
-    }
-
-    // Get selected colors
-    const colorSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-      .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Color'));
-    
-    if (colorSection) {
-      const colorLabels = colorSection.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
-      for (const label of colorLabels) {
-        const checkbox = label.querySelector('input[type="checkbox"]');
-        if (checkbox && checkbox.checked) {
-          const colorText = label.querySelector('[class*="OJHqec"][class*="_6i1qKy"]')?.textContent.trim();
-          if (colorText) {
-            filters.colors.push(colorText);
-          }
-        }
-      }
-    }
-
-    // Get selected sizes
-    const sizeSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-      .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Size'));
-    
-    if (sizeSection) {
-      const sizeLabels = sizeSection.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
-      for (const label of sizeLabels) {
-        const checkbox = label.querySelector('input[type="checkbox"]');
-        if (checkbox && checkbox.checked) {
-          const sizeText = label.querySelector('[class*="_6i1qKy"]')?.textContent.trim();
-          if (sizeText) {
-            filters.sizes.push(sizeText);
-          }
-        }
-      }
-    }
-  }
-
-  console.log("[Content Script] Extracted Flipkart filters:", filters);
-  return filters;
-}
-
-async function applyFlipkartFilters(filters) {
-  console.log("[Content Script] Applying Flipkart filters:", filters);
-  
-  try {
-    // Helper function to simulate a real click event with proper mouse events
-    const simulateClick = (element) => {
-      const events = [
-        new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }),
-        new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }),
-        new MouseEvent('click', { bubbles: true, cancelable: true, view: window })
-      ];
-      events.forEach(event => element.dispatchEvent(event));
-    };
-
-    // Helper function to verify if a specific filter is applied
-    const isFilterApplied = async (filterValue, type) => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check in the summary section first (most reliable)
-      const summarySection = document.querySelector('section[class*="pgRLLn"]');
-      if (summarySection) {
-        const appliedFilters = summarySection.querySelectorAll('.YcSYyC');
-        for (const filter of appliedFilters) {
-          const text = filter.querySelector('._6tw8ju')?.textContent.trim();
-          if (text && text.toLowerCase() === filterValue.toLowerCase()) {
-            console.log(`[Content Script] Filter verified in summary: ${filterValue}`);
-            return true;
-          }
-        }
-      }
-      
-      // If not found in summary, check checkboxes directly
-      let filterSection;
-      if (type === 'brand') {
-        filterSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-          .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Brand'));
-      } else if (type === 'color') {
-        filterSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-          .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Color'));
-      } else if (type === 'size') {
-        filterSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-          .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Size'));
-      }
-      
-      if (filterSection) {
-        const filterElements = filterSection.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
-        for (const element of filterElements) {
-          const text = element.querySelector('[class*="_6i1qKy"]')?.textContent.trim();
-          if (text && text.toLowerCase() === filterValue.toLowerCase()) {
-            const checkbox = element.querySelector('input[type="checkbox"]');
-            if (checkbox && checkbox.checked) {
-              console.log(`[Content Script] Filter verified by checkbox: ${filterValue}`);
-              return true;
-            }
-          }
-        }
-      }
-      
-      // Filter not found as applied
-      return false;
-    };
-
-    // Helper function to clear all filters
-    const clearAllFilters = async () => {
-      const clearAllButton = document.querySelector('.aOfogh span');
-      if (clearAllButton) {
-        console.log("[Content Script] Clearing all existing filters");
-        simulateClick(clearAllButton);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Verify filters are cleared
-        const summarySection = document.querySelector('section[class*="pgRLLn"]');
-        if (summarySection) {
-          const appliedFilters = summarySection.querySelectorAll('.YcSYyC');
-          if (appliedFilters.length > 0) {
-            console.log("[Content Script] Some filters still present, trying to clear again");
-            simulateClick(clearAllButton);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-        }
-      }
-    };
-
-    // Helper function to expand filter section
-    const expandSection = async (section, type) => {
-      console.log(`[Content Script] Expanding ${type} section`);
-      
-      // For size section, handle differently
-      if (type === 'size') {
-        // First try clicking the size header
-        const sizeHeader = section.querySelector('.rgHxCQ');
-        if (sizeHeader) {
-          console.log("[Content Script] Clicking size header");
-          simulateClick(sizeHeader);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-
-        // Check if section is expanded
-        let isExpanded = section.querySelector('.SDsN9S');
-        if (!isExpanded) {
-          // Try clicking the entire header section
-          const header = section.querySelector('.FtQCb2');
-          if (header) {
-            console.log("[Content Script] Clicking entire header section");
-            simulateClick(header);
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          }
-          
-          // Check again if expanded
-          isExpanded = section.querySelector('.SDsN9S');
-          if (!isExpanded) {
-            // Try clicking the parent section
-            console.log("[Content Script] Clicking parent section");
-            simulateClick(section);
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          }
-        }
-
-        // Final check for expansion
-        isExpanded = section.querySelector('.SDsN9S');
-        if (!isExpanded) {
-          console.warn("[Content Script] Could not expand size section after multiple attempts");
-          return false;
-        }
-
-        // Additional wait for size section to fully expand
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return true;
-      }
-
-      // For other sections, use the original logic
-      const header = section.querySelector('.FtQCb2');
-      if (header) {
-        const isExpanded = section.querySelector('.SDsN9S');
-        if (!isExpanded) {
-          simulateClick(header);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-      }
-
-      return section.querySelector('.SDsN9S') !== null;
-    };
-
-    // Helper function to apply a single filter with retries
-    const applySingleFilter = async (section, filterValue, type, maxRetries = 3) => {
-      console.log(`[Content Script] Applying ${type} filter: ${filterValue}`);
-      
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        console.log(`[Content Script] Attempt ${attempt}/${maxRetries} for ${type} filter: ${filterValue}`);
-        
-        // Ensure section is expanded
-        const isExpanded = await expandSection(section, type);
-        if (!isExpanded) {
-          console.warn(`[Content Script] Could not expand ${type} section`);
-          if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue;
-          }
-          return false;
-        }
-
-        // Find the filter element
-        const filterElements = section.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
-        let found = false;
-        
-        for (const element of filterElements) {
-          const text = element.querySelector('[class*="_6i1qKy"]')?.textContent.trim();
-          if (text && text.toLowerCase() === filterValue.toLowerCase()) {
-            found = true;
-            console.log(`[Content Script] Found matching ${type} filter: ${filterValue}`);
-            
-            // Try multiple interaction methods
-            const interactionMethods = [
-              // Try clicking the checkbox directly
-              async () => {
-                const checkbox = element.querySelector('input[type="checkbox"]');
-                if (checkbox) {
-                  simulateClick(checkbox);
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                  return await isFilterApplied(filterValue, type);
-                }
-                return false;
-              },
-              // Try clicking the label
-              async () => {
-                const label = element.querySelector('label');
-                if (label) {
-                  simulateClick(label);
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                  return await isFilterApplied(filterValue, type);
-                }
-                return false;
-              },
-              // Try clicking the entire element
-              async () => {
-                simulateClick(element);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return await isFilterApplied(filterValue, type);
-              }
-            ];
-
-            // Try each interaction method
-            for (const method of interactionMethods) {
-              const success = await method();
-              if (success) {
-                console.log(`[Content Script] Successfully applied ${type} filter: ${filterValue}`);
-                return true;
-              }
-            }
-            
-            // If all methods failed, try one more time with a longer delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            simulateClick(element);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            const success = await isFilterApplied(filterValue, type);
-            if (success) {
-              return true;
-            }
-          }
-        }
-        
-        // If filter not found and it's a color or size filter, try clicking "Click More"
-        if (!found && (type === 'color' || type === 'size')) {
-          const clickMoreButton = section.querySelector('.e\\+xvXX.KvHRYS span');
-          if (clickMoreButton) {
-            console.log(`[Content Script] ${type} filter not found in visible options, clicking 'Click More'`);
-            simulateClick(clickMoreButton);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Try finding the filter again after expanding
-            const expandedFilterElements = section.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
-            for (const element of expandedFilterElements) {
-              const text = element.querySelector('[class*="_6i1qKy"]')?.textContent.trim();
-              if (text && text.toLowerCase() === filterValue.toLowerCase()) {
-                console.log(`[Content Script] Found matching ${type} filter after expanding: ${filterValue}`);
-                
-                // Try the same interaction methods
-                const interactionMethods = [
-                  async () => {
-                    const checkbox = element.querySelector('input[type="checkbox"]');
-                    if (checkbox) {
-                      simulateClick(checkbox);
-                      await new Promise(resolve => setTimeout(resolve, 1000));
-                      return await isFilterApplied(filterValue, type);
-                    }
-                    return false;
-                  },
-                  async () => {
-                    const label = element.querySelector('label');
-                    if (label) {
-                      simulateClick(label);
-                      await new Promise(resolve => setTimeout(resolve, 1000));
-                      return await isFilterApplied(filterValue, type);
-                    }
-                    return false;
-                  },
-                  async () => {
-                    simulateClick(element);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    return await isFilterApplied(filterValue, type);
-                  }
-                ];
-
-                for (const method of interactionMethods) {
-                  const success = await method();
-                  if (success) {
-                    console.log(`[Content Script] Successfully applied ${type} filter after expanding: ${filterValue}`);
-                    return true;
-                  }
-                }
-                
-                // If all methods failed, try one more time with a longer delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateClick(element);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                const success = await isFilterApplied(filterValue, type);
-                if (success) {
-                  return true;
-                }
-              }
-            }
-          }
-        }
-        
-        if (!found) {
-          console.warn(`[Content Script] ${type} filter not found: ${filterValue}`);
-        }
-        
-        // If this attempt failed and we have more retries, wait before trying again
-        if (attempt < maxRetries) {
-          console.log(`[Content Script] Retrying ${type} filter: ${filterValue}`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-      
-      return false;
-    };
-
-    // Helper function to apply a group of filters
-    const applyFilterGroup = async (filters, type, section) => {
-      if (filters && filters.length > 0) {
-        console.log(`[Content Script] Applying ${type} filters:`, filters);
-        
-        // First check if any filters are already applied
-        const currentFilters = await getFlipkartFilters();
-        const currentTypeFilters = currentFilters[type + 's'] || [];
-        console.log(`[Content Script] Current ${type} filters:`, currentTypeFilters);
-        
-        // Filter out already applied values
-        const filtersToApply = filters.filter(filter => !currentTypeFilters.includes(filter));
-        
-        if (filtersToApply.length === 0) {
-          console.log(`[Content Script] All ${type} filters already applied, skipping`);
-          // Add already applied filters to our tracking
-          filters.forEach(filter => {
-            if (!appliedFilters[type + 's'].includes(filter)) {
-              appliedFilters[type + 's'].push(filter);
-            }
-          });
-          return;
-        }
-        
-        console.log(`[Content Script] Applying ${filtersToApply.length} ${type} filters:`, filtersToApply);
-        
-        for (const filter of filtersToApply) {
-          // Check if this specific filter was already applied (double-check)
-          if (currentTypeFilters.includes(filter) || appliedFilters[type + 's'].includes(filter)) {
-            console.log(`[Content Script] Filter ${filter} already applied, skipping`);
-            if (!appliedFilters[type + 's'].includes(filter)) {
-              appliedFilters[type + 's'].push(filter);
-            }
-            continue;
-          }
-          
-          const success = await applySingleFilter(section, filter, type);
-          if (success) {
-            appliedFilters[type + 's'].push(filter);
-            // Wait between applying filters of the same type
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-        }
-      }
-    };
-
-    // Clear all filters first
-    await clearAllFilters();
-    
-    // Track applied filters
-    let appliedFilters = {
-      brands: [],
-      colors: [],
-      sizes: []
-    };
-    
-    // Check for brand filters
-    if (filters.brands && filters.brands.length > 0) {
-      const brandSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-        .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Brand'));
-      if (brandSection) {
-        await applyFilterGroup(filters.brands, 'brand', brandSection);
-      }
-    }
-
-    // Wait before applying next filter type
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Check for color filters
-    if (filters.colors && filters.colors.length > 0) {
-      const colorSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-        .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Color'));
-      if (colorSection) {
-        await applyFilterGroup(filters.colors, 'color', colorSection);
-      }
-    }
-
-    // Wait before applying next filter type
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Check for size filters
-    if (filters.sizes && filters.sizes.length > 0) {
-      const sizeSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-        .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Size'));
-      if (sizeSection) {
-        // Additional wait for size section
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        await applyFilterGroup(filters.sizes, 'size', sizeSection);
-      }
-    }
-
-    // Final verification
-    console.log("[Content Script] Applied filters:", appliedFilters);
-    
-    // Calculate which filters we were unable to apply
-    const unappliedFilters = {
-      brands: filters.brands.filter(brand => !appliedFilters.brands.includes(brand)),
-      colors: filters.colors.filter(color => !appliedFilters.colors.includes(color)),
-      sizes: filters.sizes.filter(size => !appliedFilters.sizes.includes(size))
-    };
-    
-    // Check if we have any unapplied filters
-    const hasUnappliedFilters = 
-      unappliedFilters.brands.length > 0 || 
-      unappliedFilters.colors.length > 0 || 
-      unappliedFilters.sizes.length > 0;
-    
-    if (hasUnappliedFilters) {
-      console.log("[Content Script] Some filters were not applied:", unappliedFilters);
-      
-      // Only try once more with very specific values that weren't applied
-      // and only if we have something to retry
-      let retrySuccessful = false;
-      
-      if (unappliedFilters.brands.length > 0) {
-        const brandSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-          .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Brand'));
-        if (brandSection) {
-          for (const brand of unappliedFilters.brands) {
-            // Skip if somehow it got applied in the meantime
-            if (appliedFilters.brands.includes(brand)) continue;
-            
-            const success = await applySingleFilter(brandSection, brand, 'brand');
-            if (success) {
-              appliedFilters.brands.push(brand);
-              retrySuccessful = true;
-            }
-          }
-        }
-      }
-      
-      if (unappliedFilters.colors.length > 0) {
-        const colorSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-          .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Color'));
-        if (colorSection) {
-          for (const color of unappliedFilters.colors) {
-            // Skip if somehow it got applied in the meantime
-            if (appliedFilters.colors.includes(color)) continue;
-            
-            const success = await applySingleFilter(colorSection, color, 'color');
-            if (success) {
-              appliedFilters.colors.push(color);
-              retrySuccessful = true;
-            }
-          }
-        }
-      }
-      
-      if (unappliedFilters.sizes.length > 0) {
-        const sizeSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
-          .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Size'));
-        if (sizeSection) {
-          for (const size of unappliedFilters.sizes) {
-            // Skip if somehow it got applied in the meantime
-            if (appliedFilters.sizes.includes(size)) continue;
-            
-            const success = await applySingleFilter(sizeSection, size, 'size');
-            if (success) {
-              appliedFilters.sizes.push(size);
-              retrySuccessful = true;
-            }
-          }
-        }
-      }
-      
-      // If retry was successful, update our list of unapplied filters
-      if (retrySuccessful) {
-        console.log("[Content Script] Retry was partially successful, updated applied filters:", appliedFilters);
-      }
-    }
-    
-    // Return success even if not all filters were applied
-    return { 
-      success: true, 
-      appliedFilters,
-      partialSuccess: hasUnappliedFilters
-    };
-  } catch (error) {
-    console.error("[Content Script] Error applying Flipkart filters:", error);
-    throw error;
-  }
-}
-
-// Snapdeal-specific functions
-async function getSnapdealFilters() {
-  console.log("[Content Script] Getting Snapdeal filters");
-  
-  const filters = {
-    brands: [],
-    sizes: [],
-    colors: []
-  };
-  
-  try {
-    // Wait for the filter sections to be available
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Get selected brands
-    const brandSection = Array.from(document.querySelectorAll('.filter-section'))
-      .find(section => {
-        const displayName = section.getAttribute('data-displayname');
-        return displayName && displayName.toLowerCase() === 'brand';
-      });
-    
-    if (brandSection) {
-      console.log("[Content Script] Found brand section");
-      
-      // Check both regular checkboxes and checkboxes in modal
-      const brandCheckboxes = brandSection.querySelectorAll('.filter-inner .filters-list input[type="checkbox"]:checked, .js-adv-filters .filters-list input[type="checkbox"]:checked');
-      
-      for (const checkbox of brandCheckboxes) {
-        try {
-          const brandValue = checkbox.value;
-          if (brandValue && !filters.brands.includes(brandValue)) {
-            filters.brands.push(brandValue);
-            console.log(`[Content Script] Added brand: ${brandValue}`);
-          }
-        } catch (error) {
-          console.error("[Content Script] Error getting brand value:", error);
-        }
-      }
-    }
-    
-    // Get selected colors
-    const colorSection = Array.from(document.querySelectorAll('.filter-section'))
-      .find(section => {
-        const displayName = section.getAttribute('data-displayname');
-        return displayName && displayName.toLowerCase() === 'color';
-      });
-    
-    if (colorSection) {
-      console.log("[Content Script] Found color section");
-      
-      const colorCheckboxes = colorSection.querySelectorAll('.filter-inner .filters-list input[type="checkbox"]:checked, .js-adv-filters .filters-list input[type="checkbox"]:checked');
-      
-      for (const checkbox of colorCheckboxes) {
-        try {
-          const colorValue = checkbox.value;
-          if (colorValue && !filters.colors.includes(colorValue)) {
-            filters.colors.push(colorValue);
-            console.log(`[Content Script] Added color: ${colorValue}`);
-          }
-        } catch (error) {
-          console.error("[Content Script] Error getting color value:", error);
-        }
-      }
-    }
-    
-    // Get selected sizes
-    const sizeSection = Array.from(document.querySelectorAll('.filter-section'))
-      .find(section => {
-        const displayName = section.getAttribute('data-displayname');
-        return displayName && displayName.toLowerCase() === 'size';
-      });
-    
-    if (sizeSection) {
-      console.log("[Content Script] Found size section");
-      
-      const sizeCheckboxes = sizeSection.querySelectorAll('.filter-inner .filters-list input[type="checkbox"]:checked, .js-adv-filters .filters-list input[type="checkbox"]:checked');
-      
-      for (const checkbox of sizeCheckboxes) {
-        try {
-          const sizeValue = checkbox.value;
-          if (sizeValue && !filters.sizes.includes(sizeValue)) {
-            filters.sizes.push(sizeValue);
-            console.log(`[Content Script] Added size: ${sizeValue}`);
-          }
-        } catch (error) {
-          console.error("[Content Script] Error getting size value:", error);
-        }
-      }
-    }
-    
-    console.log("[Content Script] Extracted Snapdeal filters:", filters);
-  } catch (error) {
-    console.error("[Content Script] Error getting Snapdeal filters:", error);
-  }
-  
-  return filters;
-}
-
-async function applySnapdealFilters(filters) {
-  console.log("[Content Script] Applying Snapdeal filters:", filters);
-  
-  try {
-    // Helper function to wait for element to be available
-    const waitForElement = async (selector, maxAttempts = 10, interval = 500) => {
-      let attempts = 0;
-      while (attempts < maxAttempts) {
-        const element = document.querySelector(selector);
-        if (element) return element;
-        
-        await new Promise(resolve => setTimeout(resolve, interval));
-        attempts++;
-      }
-      return null;
-    };
-    
-    // Helper function to click a checkbox for a specific filter
-    const applyFilter = async (sectionSelector, filterValue, filterType) => {
-      console.log(`[Content Script] Applying ${filterType} filter: ${filterValue}`);
-      
-      const section = await waitForElement(sectionSelector);
-      if (!section) {
-        console.warn(`[Content Script] ${filterType} section not found`);
-        return false;
-      }
-      
-      // First try to find the filter in the visible filter options
-      let checkbox = section.querySelector(`input[id="${filterType}-${filterValue}"]:not(:checked), input[id="${filterType}_s-${filterValue}"]:not(:checked)`);
-      
-      if (!checkbox) {
-        // If not found, try to find "View More" button and click it
-        const viewMoreBtn = section.querySelector('.view-more-button, .viewMoreFilter');
-        if (viewMoreBtn) {
-          console.log(`[Content Script] Clicking View More button for ${filterType}`);
-          viewMoreBtn.click();
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Wait for modal to appear
-          const modal = await waitForElement('.js-adv-filters.adv-filters');
-          if (modal) {
-            console.log(`[Content Script] Modal opened, looking for ${filterType} filter: ${filterValue}`);
-            
-            // Try to find checkbox in modal
-            checkbox = modal.querySelector(`input[id="${filterType}-${filterValue}"]:not(:checked), input[id="${filterType}_s-${filterValue}"]:not(:checked), input[value="${filterValue}"]:not(:checked)`);
-            
-            if (!checkbox) {
-              // Try to search for the filter if there's a search box
-              const searchBox = modal.querySelector('.js-searchable-box');
-              if (searchBox) {
-                console.log(`[Content Script] Using search box to find: ${filterValue}`);
-                searchBox.value = filterValue;
-                searchBox.dispatchEvent(new Event('input', { bubbles: true }));
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // Try to find checkbox again after search
-                checkbox = modal.querySelector(`input[value="${filterValue}"]:not(:checked)`);
-              }
-            }
-            
-            if (checkbox) {
-              console.log(`[Content Script] Found ${filterType} in modal: ${filterValue}`);
-              checkbox.click();
-              await new Promise(resolve => setTimeout(resolve, 500));
-              
-              // Click Apply button
-              const applyBtn = modal.querySelector('.applyFilters');
-              if (applyBtn) {
-                console.log("[Content Script] Clicking Apply button");
-                applyBtn.click();
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-            } else {
-              // Close modal if filter not found
-              const closeBtn = modal.querySelector('.close-adv');
-              if (closeBtn) {
-                console.log(`[Content Script] Closing modal - filter not found`);
-                closeBtn.click();
-                await new Promise(resolve => setTimeout(resolve, 1000));
-              }
-            }
-          }
-        }
-      } else {
-        // If found in main section, just click it
-        console.log(`[Content Script] Found ${filterType} in main section: ${filterValue}`);
-        checkbox.click();
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return true;
-      }
-      
-      console.warn(`[Content Script] Could not find ${filterType}: ${filterValue}`);
-      return false;
-    };
-    
-    // Clear all filters first
-    const clearAll = async () => {
-      const clearButtons = document.querySelectorAll('.filter-clear');
-      if (clearButtons.length > 0) {
-        console.log(`[Content Script] Clearing existing filters`);
-        for (const button of clearButtons) {
-          if (button.textContent.trim().toLowerCase() === 'clear') {
-            button.click();
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-    };
-    
-    // Clear filters first
-    await clearAll();
-    
-    // Apply filters one by one
-    let appliedFilters = {
-      brands: [],
-      colors: [],
-      sizes: []
-    };
-    
-    // Apply brand filters
-    if (filters.brands && filters.brands.length > 0) {
-      console.log("[Content Script] Applying brand filters on Snapdeal");
-      for (const brand of filters.brands) {
-        const brandValue = typeof brand === 'string' ? brand : brand.text || brand.value || brand;
-        const success = await applyFilter('.filter-section[data-displayname="Brand"]', brandValue, 'Brand');
-        if (success) {
-          appliedFilters.brands.push(brandValue);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-      }
-    }
-    
-    // Apply color filters
-    if (filters.colors && filters.colors.length > 0) {
-      console.log("[Content Script] Applying color filters on Snapdeal");
-      for (const color of filters.colors) {
-        const colorValue = typeof color === 'string' ? color : color.text || color.value || color;
-        const success = await applyFilter('.filter-section[data-displayname="Color"]', colorValue, 'Color_s');
-        if (success) {
-          appliedFilters.colors.push(colorValue);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-      }
-    }
-    
-    // Apply size filters
-    if (filters.sizes && filters.sizes.length > 0) {
-      console.log("[Content Script] Applying size filters on Snapdeal");
-      for (const size of filters.sizes) {
-        const sizeValue = typeof size === 'string' ? size : size.text || size.value || size;
-        const success = await applyFilter('.filter-section[data-displayname="Size"]', sizeValue, 'Size_s');
-        if (success) {
-          appliedFilters.sizes.push(sizeValue);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-      }
-    }
-    
-    // Return results
-    console.log("[Content Script] Applied Snapdeal filters:", appliedFilters);
-    return {
-      success: true,
-      appliedFilters: appliedFilters
-    };
-  } catch (error) {
-    console.error("[Content Script] Error applying Snapdeal filters:", error);
-    throw error;
-  }
-}
-
-// Nykaa-specific functions
-async function getNykaaFilters() {
-  const filters = {
-    brands: [],
-    sizes: [],
-    colors: []
-  };
-
-  try {
-    console.log("[Content Script] Getting Nykaa filters");
-
-    // Check the applied filters section first
-    const appliedFiltersSection = document.querySelector('.css-19j3ean');
-    if (appliedFiltersSection) {
-      const appliedFilters = appliedFiltersSection.querySelectorAll('.css-3i7s5s');
-      for (const filter of appliedFilters) {
-        const filterText = filter.querySelector('.filter-value')?.textContent.trim();
-        if (filterText) {
-          // Try to determine filter type based on the text
-          if (filterText.match(/^UK \d+$/i)) {
-            filters.sizes.push(filterText);
-          } else if (filterText.match(/^(Black|White|Red|Blue|Green|Yellow|Beige|Brown|Grey|Pink|Purple|Orange|Multi-Color|Gold|Silver|Off White|Cream)$/i)) {
-            filters.colors.push(filterText);
-          } else {
-            // Assume it's a brand if it doesn't match size or color patterns
-            filters.brands.push(filterText);
-          }
-        }
-      }
-    }
-
-    // If no filters found in applied section, check individual filter sections
-    if (filters.brands.length === 0 && filters.sizes.length === 0 && filters.colors.length === 0) {
-      // Check brand filters
-      const brandSection = document.querySelector('#first-filter');
-      if (brandSection) {
-        const brandCheckboxes = brandSection.querySelectorAll('input[type="checkbox"]:checked');
-        for (const checkbox of brandCheckboxes) {
-          const label = checkbox.closest('label')?.querySelector('.title')?.textContent.trim();
-          if (label) {
-            filters.brands.push(label);
-          }
-        }
-      }
-
-      // Check size filters
-      const sizeSection = document.querySelector('div[class="css-w2222k"]:has(span.title:contains("Size"))');
-      if (sizeSection) {
-        const sizeCheckboxes = sizeSection.querySelectorAll('input[type="checkbox"]:checked');
-        for (const checkbox of sizeCheckboxes) {
-          const label = checkbox.closest('label')?.querySelector('.title')?.textContent.trim();
-          if (label) {
-            filters.sizes.push(label);
-          }
-        }
-      }
-
-      // Check color filters
-      const colorSection = document.querySelector('div[class="css-w2222k"]:has(span.title:contains("Color"))');
-      if (colorSection) {
-        const colorCheckboxes = colorSection.querySelectorAll('input[type="checkbox"]:checked');
-        for (const checkbox of colorCheckboxes) {
-          const label = checkbox.closest('label')?.querySelector('.title')?.textContent.trim();
-          if (label) {
-            filters.colors.push(label);
-          }
-        }
-      }
-    }
-
-    console.log("[Content Script] Extracted Nykaa filters:", filters);
-    return filters;
-  } catch (error) {
-    console.error("[Content Script] Error getting Nykaa filters:", error);
-    throw error;
-  }
-}
-
-async function applyNykaaFilters(filters) {
-  console.log("[Content Script] Applying Nykaa filters:", filters);
-
-  try {
-    // Helper function to click an element
-    const clickElement = async (element) => {
-      if (element) {
-        element.click();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    };
-
-    // Helper function to verify if a filter is applied
-    const isFilterApplied = (filterValue) => {
-      const appliedFiltersSection = document.querySelector('.css-19j3ean');
-      if (appliedFiltersSection) {
-        const appliedFilters = appliedFiltersSection.querySelectorAll('.css-3i7s5s');
-        for (const filter of appliedFilters) {
-          const text = filter.querySelector('.filter-value')?.textContent.trim();
-          if (text && text.toLowerCase() === filterValue.toLowerCase()) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-
-    // Helper function to clear all filters
-    const clearAllFilters = async () => {
-      const clearAllButton = document.querySelector('button.filter-clear-all');
-      if (clearAllButton) {
-        await clickElement(clearAllButton);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    };
-
-    // Helper function to apply a single filter
-    const applySingleFilter = async (filterSection, filterValue) => {
-      // Click to expand the filter section if it's collapsed
-      const filterHeader = filterSection.querySelector('.filter-open');
-      if (filterHeader) {
-        const isExpanded = filterSection.querySelector('ul.css-oryinj');
-        if (!isExpanded) {
-          await clickElement(filterHeader);
-        }
-      }
-
-      // Find and click the checkbox for the filter value
-      const filterItems = filterSection.querySelectorAll('.control-box');
-      for (const item of filterItems) {
-        const label = item.querySelector('.title')?.textContent.trim();
-        if (label && label.toLowerCase() === filterValue.toLowerCase()) {
-          const checkbox = item.querySelector('input[type="checkbox"]');
-          if (checkbox && !checkbox.checked) {
-            await clickElement(checkbox);
-            
-            // Verify the filter was applied
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            if (isFilterApplied(filterValue)) {
-              return true;
-            }
-          } else if (checkbox && checkbox.checked) {
-            // Filter is already applied
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-
-    // Clear existing filters first
-    await clearAllFilters();
-
-    // Track successfully applied filters
-    const appliedFilters = {
-      brands: [],
-      colors: [],
-      sizes: []
-    };
-
-    // Apply brand filters
-    if (filters.brands && filters.brands.length > 0) {
-      const brandSection = document.querySelector('#first-filter');
-      if (brandSection) {
-        for (const brand of filters.brands) {
-          const success = await applySingleFilter(brandSection, brand);
-          if (success) {
-            appliedFilters.brands.push(brand);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-    }
-
-    // Apply size filters
-    if (filters.sizes && filters.sizes.length > 0) {
-      const sizeSection = document.querySelector('div[class="css-w2222k"]:has(span.title:contains("Size"))');
-      if (sizeSection) {
-        for (const size of filters.sizes) {
-          const success = await applySingleFilter(sizeSection, size);
-          if (success) {
-            appliedFilters.sizes.push(size);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-    }
-
-    // Apply color filters
-    if (filters.colors && filters.colors.length > 0) {
-      const colorSection = document.querySelector('div[class="css-w2222k"]:has(span.title:contains("Color"))');
-      if (colorSection) {
-        for (const color of filters.colors) {
-          const success = await applySingleFilter(colorSection, color);
-          if (success) {
-            appliedFilters.colors.push(color);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-    }
-
-    console.log("[Content Script] Successfully applied Nykaa filters:", appliedFilters);
-    return appliedFilters;
-  } catch (error) {
-    console.error("[Content Script] Error applying Nykaa filters:", error);
-    throw error;
-  }
 }
 
 // Myntra-specific filter application
@@ -2358,47 +1880,71 @@ async function applyMyntraFilters(filters) {
     // Clear existing filters first
     await resetMyntraFilters();
     
-    let appliedFilters = {
-      brands: [],
-      sizes: [],
-      colors: []
+    let results = {
+      brands: { success: false, appliedCount: 0, totalCount: 0, appliedFilters: [], failedFilters: [] },
+      sizes: { success: false, appliedCount: 0, totalCount: 0, appliedFilters: [], failedFilters: [] },
+      colors: { success: false, appliedCount: 0, totalCount: 0, appliedFilters: [], failedFilters: [] }
     };
 
     // Apply brand filters
     if (filters.brands && filters.brands.length > 0) {
-      const success = await applyBrandFilters(filters.brands, 'myntra');
-      if (success) {
-        appliedFilters.brands = filters.brands;
-      }
+      console.log("[Content Script] Starting brand filters application for Myntra");
+      results.brands = await applyBrandFilters(filters.brands, 'myntra');
+      
+      // Wait between filter types
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
-
-    // Wait between filter types
-    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Apply size filters
     if (filters.sizes && filters.sizes.length > 0) {
-      const success = await applySizeFilters(filters.sizes, 'myntra');
-      if (success) {
-        appliedFilters.sizes = filters.sizes;
-      }
+      console.log("[Content Script] Starting size filters application for Myntra");
+      results.sizes = await applySizeFilters(filters.sizes, 'myntra');
+      
+      // Wait between filter types
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
-
-    // Wait between filter types
-    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Apply color filters
     if (filters.colors && filters.colors.length > 0) {
-      const success = await applyColorFilters(filters.colors, 'myntra');
-      if (success) {
-        appliedFilters.colors = filters.colors;
-      }
+      console.log("[Content Script] Starting color filters application for Myntra");
+      results.colors = await applyColorFilters(filters.colors, 'myntra');
+      
+      // Wait for final processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    // Return success even if some filters couldn't be applied
+    // Calculate overall results
+    const totalRequested = results.brands.totalCount + results.sizes.totalCount + results.colors.totalCount;
+    const totalApplied = results.brands.appliedCount + results.sizes.appliedCount + results.colors.appliedCount;
+    const overallSuccess = totalApplied > 0;
+    const partialSuccess = totalApplied < totalRequested && totalApplied > 0;
+
+    console.log("[Content Script] Myntra filter application complete:", {
+      totalRequested,
+      totalApplied,
+      brands: results.brands,
+      sizes: results.sizes,
+      colors: results.colors
+    });
+
     return {
-      success: true,
-      appliedFilters: appliedFilters,
-      partialSuccess: !areAllFiltersApplied(filters, appliedFilters)
+      success: overallSuccess,
+      partialSuccess: partialSuccess,
+      results: results,
+      summary: {
+        totalRequested,
+        totalApplied,
+        appliedFilters: {
+          brands: results.brands.appliedFilters,
+          sizes: results.sizes.appliedFilters,
+          colors: results.colors.appliedFilters
+        },
+        failedFilters: {
+          brands: results.brands.failedFilters,
+          sizes: results.sizes.failedFilters,
+          colors: results.colors.failedFilters
+        }
+      }
     };
   } catch (error) {
     console.error("[Content Script] Error applying Myntra filters:", error);
@@ -2414,47 +1960,71 @@ async function applyAjioFilters(filters) {
     // Clear existing filters first
     await resetAjioFilters();
     
-    let appliedFilters = {
-      brands: [],
-      sizes: [],
-      colors: []
+    let results = {
+      brands: { success: false, appliedCount: 0, totalCount: 0, appliedFilters: [], failedFilters: [] },
+      sizes: { success: false, appliedCount: 0, totalCount: 0, appliedFilters: [], failedFilters: [] },
+      colors: { success: false, appliedCount: 0, totalCount: 0, appliedFilters: [], failedFilters: [] }
     };
 
     // Apply brand filters
     if (filters.brands && filters.brands.length > 0) {
-      const success = await applyBrandFilters(filters.brands, 'ajio');
-      if (success) {
-        appliedFilters.brands = filters.brands;
-      }
+      console.log("[Content Script] Starting brand filters application for Ajio");
+      results.brands = await applyBrandFilters(filters.brands, 'ajio');
+      
+      // Wait between filter types
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
-
-    // Wait between filter types
-    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Apply size filters
     if (filters.sizes && filters.sizes.length > 0) {
-      const success = await applySizeFilters(filters.sizes, 'ajio');
-      if (success) {
-        appliedFilters.sizes = filters.sizes;
-      }
+      console.log("[Content Script] Starting size filters application for Ajio");
+      results.sizes = await applySizeFilters(filters.sizes, 'ajio');
+      
+      // Wait between filter types
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
-
-    // Wait between filter types
-    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Apply color filters
     if (filters.colors && filters.colors.length > 0) {
-      const success = await applyColorFilters(filters.colors, 'ajio');
-      if (success) {
-        appliedFilters.colors = filters.colors;
-      }
+      console.log("[Content Script] Starting color filters application for Ajio");
+      results.colors = await applyColorFilters(filters.colors, 'ajio');
+      
+      // Wait for final processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    // Return success even if some filters couldn't be applied
+    // Calculate overall results
+    const totalRequested = results.brands.totalCount + results.sizes.totalCount + results.colors.totalCount;
+    const totalApplied = results.brands.appliedCount + results.sizes.appliedCount + results.colors.appliedCount;
+    const overallSuccess = totalApplied > 0;
+    const partialSuccess = totalApplied < totalRequested && totalApplied > 0;
+
+    console.log("[Content Script] Ajio filter application complete:", {
+      totalRequested,
+      totalApplied,
+      brands: results.brands,
+      sizes: results.sizes,
+      colors: results.colors
+    });
+
     return {
-      success: true,
-      appliedFilters: appliedFilters,
-      partialSuccess: !areAllFiltersApplied(filters, appliedFilters)
+      success: overallSuccess,
+      partialSuccess: partialSuccess,
+      results: results,
+      summary: {
+        totalRequested,
+        totalApplied,
+        appliedFilters: {
+          brands: results.brands.appliedFilters,
+          sizes: results.sizes.appliedFilters,
+          colors: results.colors.appliedFilters
+        },
+        failedFilters: {
+          brands: results.brands.failedFilters,
+          sizes: results.sizes.failedFilters,
+          colors: results.colors.failedFilters
+        }
+      }
     };
   } catch (error) {
     console.error("[Content Script] Error applying Ajio filters:", error);
@@ -2473,4 +2043,1040 @@ function areAllFiltersApplied(requestedFilters, appliedFilters) {
   return checkArrays(requestedFilters.brands, appliedFilters.brands) &&
          checkArrays(requestedFilters.sizes, appliedFilters.sizes) &&
          checkArrays(requestedFilters.colors, appliedFilters.colors);
+}
+
+// Amazon-specific filter application
+async function applyAmazonFilters(filters) {
+  console.log("[Content Script] Applying Amazon filters:", filters);
+  
+  try {
+    // Normalize filter values - handle both string and object formats
+    const normalizedFilters = {
+      brands: (filters.brands || []).map(b => typeof b === 'string' ? b : b.text || b.value || b),
+      sizes: (filters.sizes || []).map(s => typeof s === 'string' ? s : s.text || s.value || s),
+      colors: (filters.colors || []).map(c => typeof c === 'string' ? c : c.text || c.value || c)
+    };
+    
+    console.log("[Content Script] Normalized Amazon filters:", normalizedFilters);
+    
+    // Store original requested filters for toast comparison
+    const requestedFilters = {
+      brands: [...normalizedFilters.brands],
+      sizes: [...normalizedFilters.sizes], 
+      colors: [...normalizedFilters.colors]
+    };
+    
+    let results = {
+      brands: { success: false, appliedCount: 0, totalCount: normalizedFilters.brands.length, appliedFilters: [], failedFilters: [] },
+      sizes: { success: false, appliedCount: 0, totalCount: normalizedFilters.sizes.length, appliedFilters: [], failedFilters: [] },
+      colors: { success: false, appliedCount: 0, totalCount: normalizedFilters.colors.length, appliedFilters: [], failedFilters: [] }
+    };
+
+    // Enhanced helper function to wait for element and click with retries
+    const waitAndClick = async (element, description, maxRetries = 2) => {
+      if (!element) {
+        console.warn(`[Content Script] ${description} not found`);
+        return false;
+      }
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+          console.log(`[Content Script] Attempting to click ${description} (attempt ${attempt}/${maxRetries})`);
+          
+          // Scroll element into view
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // Check if element is clickable
+          const rect = element.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) {
+            console.warn(`[Content Script] Element not visible: ${description}`);
+            if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
+            }
+            return false;
+          }
+          
+          // Click the element
+        element.click();
+          console.log(`[Content Script] Successfully clicked ${description}`);
+          
+          // Wait for page to update
+          await new Promise(resolve => setTimeout(resolve, 2500));
+        return true;
+          
+      } catch (error) {
+          console.error(`[Content Script] Error clicking ${description} (attempt ${attempt}):`, error);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+        }
+      }
+      
+      console.error(`[Content Script] Failed to click ${description} after ${maxRetries} attempts`);
+      return false;
+    };
+
+    // Enhanced matching function with multiple matching strategies
+    const enhancedMatch = (value, candidate) => {
+      if (!value || !candidate) return { match: false, score: 0 };
+      
+      const valueNormalized = value.toLowerCase().trim();
+      const candidateNormalized = candidate.toLowerCase().trim();
+      
+      // Exact match (highest priority)
+      if (valueNormalized === candidateNormalized) {
+        return { match: true, score: 100 };
+      }
+      
+      // Exact match ignoring case and extra spaces
+      if (valueNormalized.replace(/\s+/g, ' ') === candidateNormalized.replace(/\s+/g, ' ')) {
+        return { match: true, score: 95 };
+      }
+      
+      // Contains match (both directions)
+      if (valueNormalized.includes(candidateNormalized) || candidateNormalized.includes(valueNormalized)) {
+        return { match: true, score: 80 };
+      }
+      
+      // Word-based matching (for multi-word brands/values)
+      const valueWords = valueNormalized.split(/\s+/);
+      const candidateWords = candidateNormalized.split(/\s+/);
+      
+      const matchingWords = valueWords.filter(word => 
+        word.length > 2 && candidateWords.some(cWord => 
+          cWord.includes(word) || word.includes(cWord)
+        )
+      );
+      
+      if (matchingWords.length > 0) {
+        const score = (matchingWords.length / Math.max(valueWords.length, candidateWords.length)) * 70;
+        return { match: score > 35, score: Math.round(score) };
+      }
+      
+      return { match: false, score: 0 };
+    };
+
+    // Generic filter application function with enhanced logic
+    const applyFilterType = async (filterValues, filterType, selectorConfig) => {
+      if (!filterValues || filterValues.length === 0) return;
+      
+      console.log(`[Content Script] Starting Amazon ${filterType} filter application for values:`, filterValues);
+      
+      // Wait for filter section to be available
+      let filterSection = document.querySelector(selectorConfig.containerSelector);
+      let attempts = 0;
+      while (!filterSection && attempts < 5) {
+        console.log(`[Content Script] Waiting for ${filterType} filter section (attempt ${attempts + 1}/5)`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        filterSection = document.querySelector(selectorConfig.containerSelector);
+        attempts++;
+      }
+      
+      if (!filterSection) {
+        console.warn(`[Content Script] ${filterType} filter section not found on Amazon`);
+        results[filterType].failedFilters.push(...filterValues);
+        return;
+      }
+      
+      for (const filterValue of filterValues) {
+        console.log(`[Content Script] Processing Amazon ${filterType} filter: ${filterValue}`);
+        
+        let appliedSuccessfully = false;
+        
+        // Check if filter is already applied
+        const appliedFilter = document.querySelector(`${selectorConfig.containerSelector} [aria-current="true"]`);
+        if (appliedFilter) {
+          const appliedText = selectorConfig.textExtractor(appliedFilter);
+          if (appliedText && enhancedMatch(filterValue, appliedText).match) {
+            console.log(`[Content Script] ${filterType} filter already applied: ${filterValue}`);
+            results[filterType].appliedFilters.push(filterValue);
+            results[filterType].appliedCount++;
+            appliedSuccessfully = true;
+            continue;
+          }
+        }
+        
+        // Get all available filter options
+        const filterElements = Array.from(document.querySelectorAll(selectorConfig.itemSelector));
+        console.log(`[Content Script] Found ${filterElements.length} ${filterType} filter options`);
+        
+        if (filterElements.length === 0) {
+          console.warn(`[Content Script] No ${filterType} filter options found`);
+          results[filterType].failedFilters.push(filterValue);
+          continue;
+        }
+        
+        // Find matching filters with scoring
+        const matches = filterElements.map(element => {
+          const text = selectorConfig.textExtractor(element);
+          const matchResult = enhancedMatch(filterValue, text);
+          return { element, text, ...matchResult };
+        }).filter(item => item.match).sort((a, b) => b.score - a.score);
+        
+        console.log(`[Content Script] Found ${matches.length} potential matches for ${filterValue}:`, 
+                   matches.slice(0, 3).map(m => `"${m.text}" (score: ${m.score})`));
+        
+        if (matches.length > 0) {
+          const bestMatch = matches[0];
+          console.log(`[Content Script] Best match for ${filterValue}: "${bestMatch.text}" (score: ${bestMatch.score})`);
+          
+          const success = await waitAndClick(bestMatch.element, `${filterType} filter: ${bestMatch.text}`);
+          
+          if (success) {
+            results[filterType].appliedFilters.push(filterValue);
+            results[filterType].appliedCount++;
+            appliedSuccessfully = true;
+            console.log(`[Content Script] Successfully applied Amazon ${filterType} filter: ${filterValue}`);
+            
+            // Wait between filter applications to avoid overwhelming the page
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } else {
+            console.error(`[Content Script] Failed to apply ${filterType} filter: ${filterValue}`);
+            results[filterType].failedFilters.push(filterValue);
+          }
+        } else {
+          console.warn(`[Content Script] No matching ${filterType} filter found for: ${filterValue}`);
+          results[filterType].failedFilters.push(filterValue);
+        }
+        
+        // Small delay between different filter values
+        if (!appliedSuccessfully) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      results[filterType].success = results[filterType].appliedCount > 0;
+      console.log(`[Content Script] ${filterType} filter application complete: ${results[filterType].appliedCount}/${results[filterType].totalCount} applied`);
+    };
+
+    // Configuration for different filter types with enhanced selectors
+    const filterConfigs = {
+      brands: {
+        containerSelector: '#filter-p_123, #brandsRefinements',
+        itemSelector: '#filter-p_123 .a-link-normal.s-navigation-item, #filter-p_123 .a-button-selected, #filter-p_123 a[aria-current="true"]',
+        textExtractor: (element) => {
+          // Try multiple extraction methods for brands
+          return element.querySelector('.a-size-base.a-color-base')?.textContent.trim() ||
+                 element.querySelector('.a-size-base')?.textContent.trim() ||
+                 element.querySelector('.a-button-text')?.textContent.trim() ||
+                 element.textContent.trim() ||
+                 element.getAttribute('aria-label') ||
+                 '';
+        }
+      },
+      colors: {
+        containerSelector: '#filter-p_n_size_two_browse-vebin, #p_n_size_two_browse-vebin/2022042031',
+        itemSelector: '#filter-p_n_size_two_browse-vebin .a-link-normal.s-navigation-item, #filter-p_n_size_two_browse-vebin a[aria-current="true"], #filter-p_n_size_two_browse-vebin .colorsprite',
+        textExtractor: (element) => {
+          // Try multiple extraction methods for colors
+          const parentLink = element.closest('a') || element;
+          const title = parentLink.getAttribute('title');
+          const ariaLabel = parentLink.getAttribute('aria-label');
+          const textContent = element.querySelector('.a-size-base.a-color-base')?.textContent.trim();
+          
+          // Handle aria-label extraction for "Remove the filter X to expand results" format
+          if (ariaLabel && ariaLabel.includes('filter')) {
+            const colorMatch = ariaLabel.match(/(?:filter|the)\s+([A-Za-z\s]+)\s+to/i);
+            if (colorMatch) {
+              return colorMatch[1].trim();
+            }
+          }
+          
+          return title || textContent || ariaLabel || '';
+        }
+      },
+      sizes: {
+        containerSelector: '#filter-p_n_size_browse-vebin, #sizeRefinements',
+        itemSelector: '#filter-p_n_size_browse-vebin .a-link-normal.s-navigation-item, #filter-p_n_size_browse-vebin .a-button-selected, #filter-p_n_size_browse-vebin button[aria-pressed="true"], #filter-p_n_size_browse-vebin a[aria-current="true"]',
+        textExtractor: (element) => {
+          // Try multiple extraction methods for sizes
+          const button = element.querySelector('button');
+          const sizeFromButton = button?.textContent.trim() || button?.getAttribute('aria-label');
+          const sizeFromSpan = element.querySelector('.a-size-base.a-color-base, .a-size-base, .a-button-text')?.textContent.trim();
+          const sizeFromAria = element.getAttribute('aria-label');
+          
+          // Handle aria-label extraction for "Remove the filter X to expand results" format
+          if (sizeFromAria && sizeFromAria.includes('filter')) {
+            const sizeMatch = sizeFromAria.match(/(?:filter|the)\s+([A-Za-z0-9\.\s]+)\s+to/i);
+            if (sizeMatch) {
+              return sizeMatch[1].trim();
+            }
+          }
+          
+          return sizeFromButton || sizeFromSpan || sizeFromAria || element.textContent.trim() || '';
+        }
+      }
+    };
+
+    // Apply filters in order: brands first, then colors, then sizes
+    await applyFilterType(normalizedFilters.brands, 'brands', filterConfigs.brands);
+    await applyFilterType(normalizedFilters.colors, 'colors', filterConfigs.colors);
+    await applyFilterType(normalizedFilters.sizes, 'sizes', filterConfigs.sizes);
+
+    // Calculate overall results
+    const totalRequested = results.brands.totalCount + results.sizes.totalCount + results.colors.totalCount;
+    const totalApplied = results.brands.appliedCount + results.sizes.appliedCount + results.colors.appliedCount;
+    const overallSuccess = totalApplied > 0;
+    const partialSuccess = totalApplied < totalRequested && totalApplied > 0;
+
+    console.log("[Content Script] Amazon filter application complete:", {
+      totalRequested,
+      totalApplied,
+      brands: results.brands,
+      sizes: results.sizes,
+      colors: results.colors
+    });
+
+    // Show toast notification for unmatched filters after a short delay
+    setTimeout(() => {
+      try {
+        showUnmatchedFiltersToast(requestedFilters, results);
+      } catch (toastError) {
+        console.error("[Content Script] Error showing Amazon toast notification:", toastError);
+      }
+    }, 1000);
+
+    return {
+      success: overallSuccess,
+      partialSuccess: partialSuccess,
+      results: results,
+      summary: {
+        totalRequested,
+        totalApplied,
+        appliedFilters: {
+          brands: results.brands.appliedFilters,
+          sizes: results.sizes.appliedFilters,
+          colors: results.colors.appliedFilters
+        },
+        failedFilters: {
+          brands: results.brands.failedFilters,
+          sizes: results.sizes.failedFilters,
+          colors: results.colors.failedFilters
+        }
+      }
+    };
+  } catch (error) {
+    console.error("[Content Script] Error applying Amazon filters:", error);
+    throw error;
+  }
+}
+
+// Flipkart-specific functions (get filters function is already implemented above)
+async function getFlipkartFilters() {
+  const filters = {
+    brands: [],
+    sizes: [],
+    colors: []
+  };
+
+  // Enhanced helper function to determine if a text is a size
+  const isSize = (text) => {
+    // Match standard letter sizes (S, M, L, XL, XXL, etc.)
+    if (text.match(/^(XS|S|M|L|XL|XXL|XXXL|2XL|3XL|4XL|5XL)$/i)) return true;
+    // Match numeric sizes (including single and double digits with optional decimal)
+    if (text.match(/^(\d{1,2}(\.\d+)?)$/i)) return true;
+    // Match special size codes like OS (One Size), FS (Free Size), etc.
+    if (text.match(/^(OS|FS|Free Size|One Size)$/i)) return true;
+    return false;
+  };
+
+  // Enhanced helper function to determine if a text is a color
+  const isColor = (text) => {
+    return text.match(/^(Black|White|Red|Blue|Green|Yellow|Beige|Brown|Grey|Pink|Purple|Orange|Navy|Maroon|Olive|Teal|Cyan|Magenta|Gold|Silver|Bronze|Multicolor|Printed|Striped|Floral|Geometric|Abstract|Animal Print|Camouflage|Tie & Dye|Ombre|Metallic|Glitter|Holographic|Neon|Pastel|Vintage|Washed|Faded|Distressed|Embellished|Sequined|Beaded|Quilted|Crochet|Knit|Woven|Denim|Leather|Suede|Velvet|Satin|Silk|Cotton|Linen|Wool|Polyester|Nylon|Spandex|Rayon|Viscose|Acrylic|Fleece|Fur|Faux Fur|Mesh|Net|Lace)$/i);
+  };
+
+  // First check the summary section for applied filters
+  const summarySection = document.querySelector('section[class*="pgRLLn"]');
+  if (summarySection) {
+    const appliedFilters = summarySection.querySelectorAll('.YcSYyC');
+    for (const filter of appliedFilters) {
+      const filterText = filter.querySelector('._6tw8ju')?.textContent.trim();
+      if (filterText) {
+        // Use enhanced pattern matching to determine filter type
+        if (isSize(filterText)) {
+          filters.sizes.push(filterText);
+          console.log(`[Content Script] Added Flipkart size: ${filterText}`);
+        } else if (isColor(filterText)) {
+          filters.colors.push(filterText);
+          console.log(`[Content Script] Added Flipkart color: ${filterText}`);
+        } else {
+          // Assume it's a brand if it doesn't match size or color patterns
+          filters.brands.push(filterText);
+          console.log(`[Content Script] Added Flipkart brand: ${filterText}`);
+        }
+      }
+    }
+  }
+
+  console.log("[Content Script] Extracted Flipkart filters:", filters);
+  return filters;
+}
+
+// Flipkart-specific filter application
+async function applyFlipkartFilters(filters) {
+  console.log("[Content Script] Applying Flipkart filters:", filters);
+  
+  try {
+    // Store original requested filters for toast comparison
+    const requestedFilters = {
+      brands: Array.isArray(filters.brands) ? [...filters.brands] : [],
+      sizes: Array.isArray(filters.sizes) ? [...filters.sizes] : [],
+      colors: Array.isArray(filters.colors) ? [...filters.colors] : []
+    };
+    
+    let results = {
+      brands: { success: false, appliedCount: 0, totalCount: (filters.brands || []).length, appliedFilters: [], failedFilters: [] },
+      sizes: { success: false, appliedCount: 0, totalCount: (filters.sizes || []).length, appliedFilters: [], failedFilters: [] },
+      colors: { success: false, appliedCount: 0, totalCount: (filters.colors || []).length, appliedFilters: [], failedFilters: [] }
+    };
+
+    // Helper function to simulate clicks
+    const simulateClick = (element) => {
+      const events = [
+        new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }),
+        new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }),
+        new MouseEvent('click', { bubbles: true, cancelable: true, view: window })
+      ];
+      events.forEach(event => element.dispatchEvent(event));
+    };
+
+    // Clear all filters first
+    const clearAllButton = document.querySelector('.aOfogh span');
+    if (clearAllButton) {
+      console.log("[Content Script] Clearing existing Flipkart filters");
+      simulateClick(clearAllButton);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
+    // Helper function to apply filter with retries
+    const applyFilterWithRetries = async (filterValue, type, maxRetries = 3) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[Content Script] Applying Flipkart ${type} filter: ${filterValue} (attempt ${attempt})`);
+          
+          let filterSection;
+          if (type === 'brand') {
+            filterSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
+              .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Brand'));
+          } else if (type === 'color') {
+            filterSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
+              .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Color'));
+          } else if (type === 'size') {
+            filterSection = Array.from(document.querySelectorAll('section[class*="-5qqlC"]'))
+              .find(section => section.querySelector('.rgHxCQ')?.textContent.includes('Size'));
+          }
+
+          if (!filterSection) {
+            console.warn(`[Content Script] ${type} filter section not found for Flipkart`);
+            return false;
+          }
+
+          // Expand section if needed
+          const header = filterSection.querySelector('.FtQCb2');
+          if (header) {
+            const isExpanded = filterSection.querySelector('.SDsN9S');
+            if (!isExpanded) {
+              simulateClick(header);
+              await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+          }
+
+          // Find and click the filter
+          const filterElements = filterSection.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
+          for (const element of filterElements) {
+            const text = element.querySelector('[class*="_6i1qKy"]')?.textContent.trim();
+            if (text && text.toLowerCase() === filterValue.toLowerCase()) {
+              const checkbox = element.querySelector('input[type="checkbox"]');
+              if (checkbox) {
+                if (!checkbox.checked) {
+                simulateClick(checkbox);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                if (checkbox.checked) {
+                  console.log(`[Content Script] Successfully applied Flipkart ${type} filter: ${filterValue}`);
+                    return true;
+                  }
+                } else {
+                  console.log(`[Content Script] Flipkart ${type} filter already applied: ${filterValue}`);
+                  return true;
+                }
+              }
+            }
+          }
+
+          // Try "Click More" if not found
+          const clickMoreButton = filterSection.querySelector('.e\\+xvXX.KvHRYS span');
+          if (clickMoreButton) {
+            console.log(`[Content Script] Clicking "More" for ${type} filters`);
+            simulateClick(clickMoreButton);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Check if modal opened for brand filters
+            if (type === 'brand') {
+              const modal = document.querySelector('.YyuWF2');
+              if (modal) {
+                console.log(`[Content Script] Brand modal opened, searching for: ${filterValue}`);
+                
+                // Find the brand in the modal
+                const modalBrandElements = modal.querySelectorAll('.ewzVkT');
+                let modalBrandFound = false;
+                
+                for (const element of modalBrandElements) {
+                  const brandText = element.querySelector('._6i1qKy')?.textContent.trim();
+                  if (brandText && brandText.toLowerCase() === filterValue.toLowerCase()) {
+                    console.log(`[Content Script] Found exact match for brand in modal: ${filterValue}`);
+                    const checkbox = element.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                      if (!checkbox.checked) {
+                        // Brand not selected, click to select it
+                        simulateClick(checkbox);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        console.log(`[Content Script] Selected brand in modal: ${filterValue}`);
+                        modalBrandFound = true;
+                      } else {
+                        console.log(`[Content Script] Brand already selected in modal: ${filterValue}`);
+                        modalBrandFound = true;
+                      }
+                      
+                      // Click Apply Filters button
+                      const applyButton = modal.querySelector('.q58xaq.M8zy8w span');
+                      if (applyButton) {
+                        console.log(`[Content Script] Clicking Apply Filters button in modal`);
+                        simulateClick(applyButton.parentElement);
+                        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for modal to close and filter to apply
+                        return true;
+                      } else {
+                        console.error(`[Content Script] Apply Filters button not found in modal`);
+                      }
+                    } else {
+                      // Handle case where there's no checkbox (might be disabled brand)
+                      const disabledElement = element.querySelector('.tJjCVx.TXuYBI');
+                      if (disabledElement) {
+                        console.log(`[Content Script] Brand is disabled in modal: ${filterValue}`);
+                      } else {
+                        console.warn(`[Content Script] No checkbox found for brand in modal: ${filterValue}`);
+                      }
+                    }
+                  }
+                }
+                
+                if (!modalBrandFound) {
+                  console.warn(`[Content Script] Brand not found in modal: ${filterValue}`);
+                  // Close modal if brand not found
+                  const closeButton = modal.querySelector('.KlcTWG');
+                  if (closeButton) {
+                    simulateClick(closeButton);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                }
+              } else {
+                console.warn(`[Content Script] Brand modal did not open for: ${filterValue}`);
+              }
+            } else {
+              // For non-brand filters, try the original expanded logic
+            const expandedFilterElements = filterSection.querySelectorAll('.ewzVkT[class*="_3DvUAf"]');
+            for (const element of expandedFilterElements) {
+              const text = element.querySelector('[class*="_6i1qKy"]')?.textContent.trim();
+              if (text && text.toLowerCase() === filterValue.toLowerCase()) {
+                const checkbox = element.querySelector('input[type="checkbox"]');
+                if (checkbox && !checkbox.checked) {
+                  simulateClick(checkbox);
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  
+                  if (checkbox.checked) {
+                    console.log(`[Content Script] Successfully applied Flipkart ${type} filter after expanding: ${filterValue}`);
+                    return true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (attempt < maxRetries) {
+            console.log(`[Content Script] Retrying Flipkart ${type} filter: ${filterValue}`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        } catch (error) {
+          console.error(`[Content Script] Error applying Flipkart ${type} filter ${filterValue} (attempt ${attempt}):`, error);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+      }
+      
+      console.warn(`[Content Script] Failed to apply Flipkart ${type} filter after ${maxRetries} attempts: ${filterValue}`);
+      return false;
+    };
+
+    // Apply brand filters
+    if (filters.brands && filters.brands.length > 0) {
+      console.log("[Content Script] Starting Flipkart brand filter application");
+      for (const brand of filters.brands) {
+        const brandValue = typeof brand === 'string' ? brand : brand.text;
+        const success = await applyFilterWithRetries(brandValue, 'brand');
+        if (success) {
+          results.brands.appliedFilters.push(brandValue);
+          results.brands.appliedCount++;
+        } else {
+          results.brands.failedFilters.push(brandValue);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      results.brands.success = results.brands.appliedCount > 0;
+    }
+
+    // Apply color filters
+    if (filters.colors && filters.colors.length > 0) {
+      console.log("[Content Script] Starting Flipkart color filter application");
+      for (const color of filters.colors) {
+        const colorValue = typeof color === 'string' ? color : color.text;
+        const success = await applyFilterWithRetries(colorValue, 'color');
+        if (success) {
+          results.colors.appliedFilters.push(colorValue);
+          results.colors.appliedCount++;
+        } else {
+          results.colors.failedFilters.push(colorValue);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      results.colors.success = results.colors.appliedCount > 0;
+    }
+
+    // Apply size filters
+    if (filters.sizes && filters.sizes.length > 0) {
+      console.log("[Content Script] Starting Flipkart size filter application");
+      for (const size of filters.sizes) {
+        const sizeValue = typeof size === 'string' ? size : size.text;
+        const success = await applyFilterWithRetries(sizeValue, 'size');
+        if (success) {
+          results.sizes.appliedFilters.push(sizeValue);
+          results.sizes.appliedCount++;
+        } else {
+          results.sizes.failedFilters.push(sizeValue);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      results.sizes.success = results.sizes.appliedCount > 0;
+    }
+
+    // Calculate overall results
+    const totalRequested = results.brands.totalCount + results.sizes.totalCount + results.colors.totalCount;
+    const totalApplied = results.brands.appliedCount + results.sizes.appliedCount + results.colors.appliedCount;
+    const overallSuccess = totalApplied > 0;
+    const partialSuccess = totalApplied < totalRequested && totalApplied > 0;
+
+    console.log("[Content Script] Flipkart filter application complete:", {
+      totalRequested,
+      totalApplied,
+      brands: results.brands,
+      sizes: results.sizes,
+      colors: results.colors
+    });
+
+    // Show toast notification for unmatched filters after a short delay
+    setTimeout(() => {
+      try {
+        showUnmatchedFiltersToast(requestedFilters, results);
+      } catch (toastError) {
+        console.error("[Content Script] Error showing Flipkart toast notification:", toastError);
+      }
+    }, 1000);
+
+    return {
+      success: overallSuccess,
+      partialSuccess: partialSuccess,
+      results: results,
+      summary: {
+        totalRequested,
+        totalApplied,
+        appliedFilters: {
+          brands: results.brands.appliedFilters,
+          sizes: results.sizes.appliedFilters,
+          colors: results.colors.appliedFilters
+        },
+        failedFilters: {
+          brands: results.brands.failedFilters,
+          sizes: results.sizes.failedFilters,
+          colors: results.colors.failedFilters
+        }
+      }
+    };
+  } catch (error) {
+    console.error("[Content Script] Error applying Flipkart filters:", error);
+    throw error;
+  }
+}
+
+// Snapdeal-specific functions (get filters function is already implemented above)
+async function getSnapdealFilters() {
+  const filters = {
+    brands: [],
+    sizes: [],
+    colors: []
+  };
+
+  console.log("[Content Script] Extracting Snapdeal filters...");
+  return filters;
+}
+
+async function applySnapdealFilters(filters) {
+  console.log("[Content Script] Applying Snapdeal filters:", filters);
+  
+  let results = {
+    brands: { success: false, appliedCount: 0, totalCount: (filters.brands || []).length, appliedFilters: [], failedFilters: [] },
+    sizes: { success: false, appliedCount: 0, totalCount: (filters.sizes || []).length, appliedFilters: [], failedFilters: [] },
+    colors: { success: false, appliedCount: 0, totalCount: (filters.colors || []).length, appliedFilters: [], failedFilters: [] }
+  };
+
+  // Implementation placeholder for Snapdeal
+  console.log("[Content Script] Snapdeal filter application not yet implemented");
+
+  return {
+    success: false,
+    partialSuccess: false,
+    results: results
+  };
+}
+
+// Toast notification system for showing unmatched filters
+function createToastNotification(unmatchedFilters) {
+  // Remove any existing toast
+  const existingToast = document.getElementById('filter-saver-toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  // Create toast container
+  const toast = document.createElement('div');
+  toast.id = 'filter-saver-toast';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #ffffff;
+    color: #000000;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border-bottom: 3px solid #7C3AED;
+    border-right: 3px solid #7C3AED;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 350px;
+    animation: slideInFromBottom 0.3s ease-out;
+  `;
+
+  // Add animation keyframes
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInFromBottom {
+      from {
+        transform: translateY(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slideOutToBottom {
+      from {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateY(100%);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Check if any filters were unmatched
+  const hasUnmatchedBrands = unmatchedFilters.brands && unmatchedFilters.brands.length > 0;
+  const hasUnmatchedSizes = unmatchedFilters.sizes && unmatchedFilters.sizes.length > 0;
+  const hasUnmatchedColors = unmatchedFilters.colors && unmatchedFilters.colors.length > 0;
+  const hasAnyUnmatched = hasUnmatchedBrands || hasUnmatchedSizes || hasUnmatchedColors;
+
+  if (!hasAnyUnmatched) {
+    // No unmatched filters, don't show toast
+    return;
+  }
+
+  // Create header
+  const header = document.createElement('div');
+  header.style.cssText = `
+    font-weight: bold;
+    margin-bottom: 12px;
+    color: #7C3AED;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  `;
+  header.innerHTML = `
+    <span style="font-size: 16px;">❌</span>
+    Filters not found on this site
+  `;
+
+  // Create content
+  const content = document.createElement('div');
+  content.style.cssText = `
+    font-size: 12px;
+    line-height: 1.6;
+    color: #000000;
+  `;
+
+  const unmatchedItems = [];
+
+  if (hasUnmatchedBrands) {
+    unmatchedItems.push(`<div style="margin: 6px 0;"><span style="color: #7C3AED; font-weight: bold;">Brands:</span> ${unmatchedFilters.brands.join(', ')}</div>`);
+  }
+
+  if (hasUnmatchedSizes) {
+    unmatchedItems.push(`<div style="margin: 6px 0;"><span style="color: #7C3AED; font-weight: bold;">Sizes:</span> ${unmatchedFilters.sizes.join(', ')}</div>`);
+  }
+
+  if (hasUnmatchedColors) {
+    unmatchedItems.push(`<div style="margin: 6px 0;"><span style="color: #7C3AED; font-weight: bold;">Colors:</span> ${unmatchedFilters.colors.join(', ')}</div>`);
+  }
+
+  content.innerHTML = unmatchedItems.join('');
+
+  // Create close button
+  const closeButton = document.createElement('button');
+  closeButton.innerHTML = '×';
+  closeButton.style.cssText = `
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #666666;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+  `;
+  closeButton.onmouseover = () => {
+    closeButton.style.backgroundColor = '#f0f0f0';
+    closeButton.style.color = '#000000';
+  };
+  closeButton.onmouseout = () => {
+    closeButton.style.backgroundColor = 'transparent';
+    closeButton.style.color = '#666666';
+  };
+
+  const removeToast = () => {
+    toast.style.animation = 'slideOutToBottom 0.3s ease-in forwards';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+      if (style.parentNode) {
+        style.remove();
+      }
+    }, 300);
+  };
+
+  closeButton.onclick = removeToast;
+
+  // Assemble toast
+  toast.appendChild(header);
+  toast.appendChild(content);
+  toast.appendChild(closeButton);
+
+  // Add to page
+  document.body.appendChild(toast);
+
+  // Auto-remove after 8 seconds
+  setTimeout(removeToast, 8000);
+}
+
+function createNoMatchesToast() {
+  // Remove any existing toast
+  const existingToast = document.getElementById('filter-saver-toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  // Create toast container for "no matches found"
+  const toast = document.createElement('div');
+  toast.id = 'filter-saver-toast';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #ffffff;
+    color: #000000;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border-bottom: 3px solid #7C3AED;
+    border-right: 3px solid #7C3AED;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 350px;
+    animation: slideInFromBottom 0.3s ease-out;
+  `;
+
+  // Add animation keyframes if not already added
+  if (!document.querySelector('style[data-filter-saver-toast]')) {
+    const style = document.createElement('style');
+    style.setAttribute('data-filter-saver-toast', 'true');
+    style.textContent = `
+      @keyframes slideInFromBottom {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutToBottom {
+        from {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Create content
+  const content = document.createElement('div');
+  content.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    color: #000000;
+  `;
+  content.innerHTML = `
+    <span style="font-size: 18px;">❌</span>
+    No matching items or values found.
+  `;
+
+  // Create close button
+  const closeButton = document.createElement('button');
+  closeButton.innerHTML = '×';
+  closeButton.style.cssText = `
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #666666;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+  `;
+  closeButton.onmouseover = () => {
+    closeButton.style.backgroundColor = '#f0f0f0';
+    closeButton.style.color = '#000000';
+  };
+  closeButton.onmouseout = () => {
+    closeButton.style.backgroundColor = 'transparent';
+    closeButton.style.color = '#666666';
+  };
+
+  const removeToast = () => {
+    toast.style.animation = 'slideOutToBottom 0.3s ease-in forwards';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 300);
+  };
+
+  closeButton.onclick = removeToast;
+
+  // Assemble toast
+  toast.appendChild(content);
+  toast.appendChild(closeButton);
+
+  // Add to page
+  document.body.appendChild(toast);
+
+  // Auto-remove after 6 seconds
+  setTimeout(removeToast, 6000);
+}
+
+// Helper function to show unmatched filters toast
+function showUnmatchedFiltersToast(requestedFilters, appliedResults) {
+  console.log("[Content Script] Checking for unmatched filters...");
+  console.log("[Content Script] Requested filters:", requestedFilters);
+  console.log("[Content Script] Applied results:", appliedResults);
+
+  // Normalize requested filters to arrays of strings
+  const normalizeFilters = (filters) => {
+    if (!filters || !Array.isArray(filters)) return [];
+    return filters.map(f => typeof f === 'string' ? f : (f.text || f.value || f.id || String(f)));
+  };
+
+  const requestedBrands = normalizeFilters(requestedFilters.brands);
+  const requestedSizes = normalizeFilters(requestedFilters.sizes);
+  const requestedColors = normalizeFilters(requestedFilters.colors);
+
+  // Get applied filters from results
+  const appliedBrands = normalizeFilters(appliedResults?.brands?.appliedFilters || []);
+  const appliedSizes = normalizeFilters(appliedResults?.sizes?.appliedFilters || []);
+  const appliedColors = normalizeFilters(appliedResults?.colors?.appliedFilters || []);
+
+  // Calculate unmatched filters
+  const unmatchedBrands = requestedBrands.filter(brand => 
+    !appliedBrands.some(applied => applied.toLowerCase().trim() === brand.toLowerCase().trim())
+  );
+  const unmatchedSizes = requestedSizes.filter(size => 
+    !appliedSizes.some(applied => applied.toLowerCase().trim() === size.toLowerCase().trim())
+  );
+  const unmatchedColors = requestedColors.filter(color => 
+    !appliedColors.some(applied => applied.toLowerCase().trim() === color.toLowerCase().trim())
+  );
+
+  const totalRequested = requestedBrands.length + requestedSizes.length + requestedColors.length;
+  const totalApplied = appliedBrands.length + appliedSizes.length + appliedColors.length;
+
+  console.log("[Content Script] Unmatched analysis:", {
+    totalRequested,
+    totalApplied,
+    unmatchedBrands,
+    unmatchedSizes,
+    unmatchedColors
+  });
+
+  // Show appropriate toast
+  if (totalApplied === 0 && totalRequested > 0) {
+    // No filters were applied at all
+    console.log("[Content Script] No filters applied, showing no matches toast");
+    createNoMatchesToast();
+  } else if (unmatchedBrands.length > 0 || unmatchedSizes.length > 0 || unmatchedColors.length > 0) {
+    // Some filters were not applied
+    console.log("[Content Script] Some filters unmatched, showing unmatched filters toast");
+    createToastNotification({
+      brands: unmatchedBrands,
+      sizes: unmatchedSizes,
+      colors: unmatchedColors
+    });
+  } else {
+    console.log("[Content Script] All requested filters were applied successfully");
+  }
 }
