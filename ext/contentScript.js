@@ -360,6 +360,8 @@ async function getCurrentFilters() {
         filters = await getFlipkartFilters();
       } else if (hostname.includes('snapdeal.com')) {
         filters = await getSnapdealFilters();
+      } else if (hostname.includes('tatacliq.com')) {
+        filters = await getTataCliqFilters();
       }
     } catch (firstError) {
       console.warn("[Content Script] First attempt to get filters failed:", firstError);
@@ -378,6 +380,8 @@ async function getCurrentFilters() {
         filters = await getFlipkartFilters();
       } else if (hostname.includes('snapdeal.com')) {
         filters = await getSnapdealFilters();
+      } else if (hostname.includes('tatacliq.com')) {
+        filters = await getTataCliqFilters();
       }
     }
 
@@ -440,6 +444,9 @@ async function applyFilters(filters) {
     } else if (hostname.includes('snapdeal.com')) {
       console.log("[Content Script] Applying filters on Snapdeal");
       result = await applySnapdealFilters(normalizedFilters);
+    } else if (hostname.includes('tatacliq.com')) {
+      console.log("[Content Script] Applying filters on TataCliq");
+      result = await applyCrossSiteFilters(normalizedFilters, 'tatacliq');
     }
     
     // Show toast notification for unmatched filters after a short delay
@@ -549,6 +556,15 @@ async function waitForElements(maxAttempts = 10, delay = 1000) {
         console.log("[Content Script] Found Snapdeal filter sections:", filterSections.length);
         return true;
       }
+    } else if (hostname.includes('tatacliq.com')) {
+      const brandFilters = document.querySelector('.FilterDesktop__newFilterBlock');
+      const colorFilters = document.querySelector('.ColourSelectPLP__base');
+      const filterItems = document.querySelector('.FilterSelect__item');
+      
+      if (brandFilters || colorFilters || filterItems) {
+        console.log("[Content Script] Found TataCliq filter elements");
+        return true;
+      }
     }
     
     attempts++;
@@ -583,6 +599,8 @@ async function applyCrossSiteFilters(filters, site) {
       result = await applyFlipkartFilters(filters);
     } else if (site === 'snapdeal') {
       result = await applySnapdealFilters(filters);
+    } else if (site === 'tatacliq') {
+      result = await applyTataCliqFilters(filters);
     } else {
       throw new Error(`Unsupported site: ${site}`);
     }
@@ -3078,5 +3096,302 @@ function showUnmatchedFiltersToast(requestedFilters, appliedResults) {
     });
   } else {
     console.log("[Content Script] All requested filters were applied successfully");
+  }
+}
+
+// TataCliq-specific functions
+async function getTataCliqFilters() {
+  const filters = {
+    brands: [],
+    sizes: [],
+    colors: []
+  };
+
+  console.log("[Content Script] Extracting TataCliq filters...");
+
+  try {
+    // Wait for page to load
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Get brand filters - check for selected brands
+    // Look for FilterSelect__contentSelected which indicates selected state
+    const selectedBrandFilters = document.querySelectorAll('.FilterSelect__item .FilterSelect__contentSelected');
+    for (const brandFilter of selectedBrandFilters) {
+      const brandName = brandFilter.querySelector('.FilterSelect__data')?.textContent.trim();
+      if (brandName && !filters.brands.includes(brandName)) {
+        // Check if this is actually a brand (not a size) by checking parent context
+        const parentSection = brandFilter.closest('.FilterDesktop__newFilterBlock');
+        const sectionHeader = parentSection?.querySelector('.Accordion__headText')?.textContent.trim();
+        
+        if (sectionHeader && sectionHeader.toLowerCase().includes('brand')) {
+          filters.brands.push(brandName);
+          console.log(`[Content Script] Found TataCliq brand: ${brandName}`);
+        } else if (sectionHeader && sectionHeader.toLowerCase().includes('size')) {
+          // This is actually a size filter
+          if (brandName && (brandName.includes('UK/IND') || brandName.includes('EURO') || /^\d+(\.\d+)?$/.test(brandName))) {
+            if (!filters.sizes.includes(brandName)) {
+              filters.sizes.push(brandName);
+              console.log(`[Content Script] Found TataCliq size: ${brandName}`);
+            }
+          }
+        }
+      }
+    }
+
+    // Also check in brand modal if open for additional brand filters
+    const brandModalItems = document.querySelectorAll('.ShowBrandModal__brandNameHolder');
+    for (const modalItem of brandModalItems) {
+      const checkbox = modalItem.querySelector('.CheckBox__checked');
+      if (checkbox) {
+        const brandName = modalItem.textContent.replace(/checkbox/g, '').trim();
+        if (brandName && !filters.brands.includes(brandName)) {
+          filters.brands.push(brandName);
+          console.log(`[Content Script] Found TataCliq brand from modal: ${brandName}`);
+        }
+      }
+    }
+
+    // Get color filters - check for selected colors with ColourSelectPLP__textHolderActive
+    const colorFilters = document.querySelectorAll('.ColourSelectPLP__base');
+    for (const colorFilter of colorFilters) {
+      const isSelected = colorFilter.querySelector('.ColourSelectPLP__textHolderActive');
+      if (isSelected) {
+        const colorId = colorFilter.id;
+        if (colorId && colorId.startsWith('filter-color-')) {
+          const colorName = colorId.replace('filter-color-', '');
+          if (colorName && !filters.colors.includes(colorName)) {
+            filters.colors.push(colorName);
+            console.log(`[Content Script] Found TataCliq color: ${colorName}`);
+          }
+        }
+      }
+    }
+
+    console.log("[Content Script] TataCliq filters extracted:", filters);
+  } catch (error) {
+    console.error("[Content Script] Error extracting TataCliq filters:", error);
+  }
+
+  return filters;
+}
+
+async function applyTataCliqFilters(filters) {
+  console.log("[Content Script] Applying TataCliq filters:", filters);
+  
+  try {
+    let results = {
+      brands: { success: false, appliedCount: 0, totalCount: (filters.brands || []).length, appliedFilters: [], failedFilters: [] },
+      sizes: { success: false, appliedCount: 0, totalCount: (filters.sizes || []).length, appliedFilters: [], failedFilters: [] },
+      colors: { success: false, appliedCount: 0, totalCount: (filters.colors || []).length, appliedFilters: [], failedFilters: [] }
+    };
+
+    // Helper function to click on a filter with retries
+    const clickFilterWithRetries = async (element, filterName, maxRetries = 3) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[Content Script] Clicking TataCliq filter ${filterName} (attempt ${attempt})`);
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          await new Promise(resolve => setTimeout(resolve, 500));
+          element.click();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return true;
+        } catch (error) {
+          console.error(`[Content Script] Error clicking filter ${filterName} (attempt ${attempt}):`, error);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+      return false;
+    };
+
+    // Apply brand filters
+    if (filters.brands && filters.brands.length > 0) {
+      console.log("[Content Script] Starting TataCliq brand filter application");
+      
+      for (const brand of filters.brands) {
+        const brandValue = typeof brand === 'string' ? brand : brand.text;
+        let applied = false;
+
+        // Find the brand section first
+        const brandSections = document.querySelectorAll('.FilterDesktop__newFilterBlock');
+        let brandSection = null;
+        
+        for (const section of brandSections) {
+          const sectionHeader = section.querySelector('.Accordion__headText')?.textContent.trim();
+          if (sectionHeader && sectionHeader.toLowerCase().includes('brand')) {
+            brandSection = section;
+            break;
+          }
+        }
+
+        if (brandSection) {
+          // First, try to find the brand in the visible list within the brand section
+          const visibleBrandItems = brandSection.querySelectorAll('.FilterSelect__item');
+          for (const item of visibleBrandItems) {
+            const brandText = item.querySelector('.FilterSelect__data')?.textContent.trim();
+            if (brandText && brandText.toLowerCase() === brandValue.toLowerCase()) {
+              const checkbox = item.querySelector('.FilterSelect__check .CheckBox__base');
+              if (checkbox && !item.querySelector('.FilterSelect__contentSelected')) {
+                const success = await clickFilterWithRetries(checkbox, brandValue);
+                if (success) {
+                  results.brands.appliedFilters.push(brandValue);
+                  results.brands.appliedCount++;
+                  applied = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          // If not found in visible list, try to click "more" button within the brand section
+          if (!applied) {
+            const moreButton = brandSection.querySelector('#filter-brand-view-more');
+            if (moreButton) {
+              await clickFilterWithRetries(moreButton, 'brand more button');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+
+              // Search in modal
+              const modalItems = document.querySelectorAll('.ShowBrandModal__brandNameHolder');
+              for (const modalItem of modalItems) {
+                const brandText = modalItem.textContent.replace(/checkbox/g, '').trim();
+                if (brandText && brandText.toLowerCase() === brandValue.toLowerCase()) {
+                  const checkbox = modalItem.querySelector('.CheckBox__square');
+                  if (checkbox && !modalItem.querySelector('.CheckBox__checked')) {
+                    const success = await clickFilterWithRetries(checkbox, brandValue);
+                    if (success) {
+                      results.brands.appliedFilters.push(brandValue);
+                      results.brands.appliedCount++;
+                      applied = true;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // Close modal if it's open
+              const modalCloseButton = document.querySelector('.ShowBrandModal__footerElement .Button__base');
+              if (modalCloseButton) {
+                await clickFilterWithRetries(modalCloseButton, 'close modal');
+              }
+            }
+          }
+        }
+
+        if (!applied) {
+          results.brands.failedFilters.push(brandValue);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      results.brands.success = results.brands.appliedCount > 0;
+    }
+
+    // Apply color filters
+    if (filters.colors && filters.colors.length > 0) {
+      console.log("[Content Script] Starting TataCliq color filter application");
+      
+      for (const color of filters.colors) {
+        const colorValue = typeof color === 'string' ? color : color.text;
+        let applied = false;
+
+        // Check if we need to expand color section first
+        const moreColorButton = document.querySelector('#color-filter-accordion');
+        if (moreColorButton && moreColorButton.textContent.includes('More')) {
+          await clickFilterWithRetries(moreColorButton, 'color more button');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // Find and click the color filter
+        const colorElement = document.querySelector(`#filter-color-${colorValue}`);
+        if (colorElement && !colorElement.querySelector('.ColourSelectPLP__textHolderActive')) {
+          const success = await clickFilterWithRetries(colorElement, colorValue);
+          if (success) {
+            results.colors.appliedFilters.push(colorValue);
+            results.colors.appliedCount++;
+            applied = true;
+          }
+        }
+
+        if (!applied) {
+          results.colors.failedFilters.push(colorValue);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      results.colors.success = results.colors.appliedCount > 0;
+    }
+
+    // Apply size filters
+    if (filters.sizes && filters.sizes.length > 0) {
+      console.log("[Content Script] Starting TataCliq size filter application");
+      
+      for (const size of filters.sizes) {
+        const sizeValue = typeof size === 'string' ? size : size.text;
+        let applied = false;
+
+        // Find size in the filter list
+        const sizeItems = document.querySelectorAll('.FilterSelect__item');
+        for (const item of sizeItems) {
+          const sizeText = item.querySelector('.FilterSelect__data')?.textContent.trim();
+          if (sizeText && sizeText === sizeValue) {
+            const checkbox = item.querySelector('.FilterSelect__check .CheckBox__base');
+            if (checkbox && !item.querySelector('.FilterSelect__contentSelected')) {
+              const success = await clickFilterWithRetries(checkbox, sizeValue);
+              if (success) {
+                results.sizes.appliedFilters.push(sizeValue);
+                results.sizes.appliedCount++;
+                applied = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!applied) {
+          results.sizes.failedFilters.push(sizeValue);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      results.sizes.success = results.sizes.appliedCount > 0;
+    }
+
+    // Calculate overall results
+    const totalRequested = results.brands.totalCount + results.sizes.totalCount + results.colors.totalCount;
+    const totalApplied = results.brands.appliedCount + results.sizes.appliedCount + results.colors.appliedCount;
+    const overallSuccess = totalApplied > 0;
+    const partialSuccess = totalApplied < totalRequested && totalApplied > 0;
+
+    console.log("[Content Script] TataCliq filter application complete:", {
+      totalRequested,
+      totalApplied,
+      brands: results.brands,
+      sizes: results.sizes,
+      colors: results.colors
+    });
+
+    return {
+      success: overallSuccess,
+      partialSuccess: partialSuccess,
+      results: results,
+      summary: {
+        totalRequested,
+        totalApplied,
+        appliedFilters: {
+          brands: results.brands.appliedFilters,
+          sizes: results.sizes.appliedFilters,
+          colors: results.colors.appliedFilters
+        },
+        failedFilters: {
+          brands: results.brands.failedFilters,
+          sizes: results.sizes.failedFilters,
+          colors: results.colors.failedFilters
+        }
+      }
+    };
+  } catch (error) {
+    console.error("[Content Script] Error applying TataCliq filters:", error);
+    throw error;
   }
 }

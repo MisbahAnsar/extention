@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TataCliq Filter Test - tatacliq.com</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .filter-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .FilterDesktop__newFilterBlock { margin: 10px 0; }
+        .Accordion__headText { font-weight: bold; margin-bottom: 10px; }
+        .FilterSelect__item { margin: 5px 0; padding: 5px; border: 1px solid #ccc; cursor: pointer; }
+        .FilterSelect__contentSelected { background-color: #e8f5e8; }
+        .FilterSelect__data { display: inline-block; margin-right: 10px; }
+        .FilterSelect__count { color: #666; }
+        .CheckBox__base { width: 20px; height: 20px; border: 1px solid #333; display: inline-block; margin-right: 5px; }
+        .CheckBox__selected { background-color: #007bff; }
+        .ColourSelectPLP__base { display: inline-block; margin: 5px; padding: 10px; border: 1px solid #ccc; cursor: pointer; }
+        .ColourSelectPLP__textHolderActive { background-color: #ffd700; }
+        button { margin: 10px 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .test-results { margin-top: 20px; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>TataCliq Filter Extraction Test</h1>
+    <p>This page simulates TataCliq's filter structure to test the extension.</p>
+
+    <!-- Brand Filter Section -->
+    <div class="filter-section">
+        <div class="FilterDesktop__newFilterBlock">
+            <div class="Accordion__headText">Brand</div>
+            
+            <!-- Selected Brands -->
+            <div class="FilterSelect__item">
+                <div class="FilterSelect__contentSelected">
+                    <div class="FilterSelect__data">Nike</div>
+                    <div class="FilterSelect__count">42</div>
+                </div>
+                <div class="CheckBox__selected CheckBox__base"></div>
+            </div>
+            
+            <div class="FilterSelect__item">
+                <div class="FilterSelect__contentSelected">
+                    <div class="FilterSelect__data">Adidas</div>
+                    <div class="FilterSelect__count">28</div>
+                </div>
+                <div class="CheckBox__selected CheckBox__base"></div>
+            </div>
+            
+            <!-- Unselected Brand -->
+            <div class="FilterSelect__item">
+                <div class="FilterSelect__itemContent">
+                    <div class="FilterSelect__data">Puma</div>
+                    <div class="FilterSelect__count">15</div>
+                </div>
+                <div class="CheckBox__base"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Size Filter Section -->
+    <div class="filter-section">
+        <div class="FilterDesktop__newFilterBlock">
+            <div class="Accordion__headText">Size</div>
+            
+            <!-- Selected Size -->
+            <div class="FilterSelect__item">
+                <div class="FilterSelect__contentSelected">
+                    <div class="FilterSelect__data">UK/IND 8</div>
+                    <div class="FilterSelect__count">12</div>
+                </div>
+                <div class="CheckBox__selected CheckBox__base"></div>
+            </div>
+            
+            <!-- Unselected Size -->
+            <div class="FilterSelect__item">
+                <div class="FilterSelect__itemContent">
+                    <div class="FilterSelect__data">UK/IND 9</div>
+                    <div class="FilterSelect__count">8</div>
+                </div>
+                <div class="CheckBox__base"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Color Filter Section -->
+    <div class="filter-section">
+        <h3>Colors</h3>
+        <!-- Selected Color -->
+        <div class="ColourSelectPLP__base" id="filter-color-black">
+            <div class="ColourSelectPLP__textHolderActive">Black</div>
+        </div>
+        
+        <!-- Unselected Color -->
+        <div class="ColourSelectPLP__base" id="filter-color-white">
+            <div class="ColourSelectPLP__textHolder">White</div>
+        </div>
+        
+        <div class="ColourSelectPLP__base" id="filter-color-red">
+            <div class="ColourSelectPLP__textHolder">Red</div>
+        </div>
+    </div>
+
+    <!-- Test Controls -->
+    <div class="filter-section">
+        <h3>Test Extension Functions</h3>
+        <button onclick="testGetFilters()">Test Get TataCliq Filters</button>
+        <button onclick="testApplyFilters()">Test Apply Sample Filters</button>
+        <button onclick="clearSelection()">Clear All Selections</button>
+        
+        <div class="test-results" id="testResults">
+            <h4>Test Results:</h4>
+            <div id="output">Click a test button to see results...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        function clearSelection() {
+            clearOutput();
+            // Remove all selected states
+            document.querySelectorAll('.FilterSelect__contentSelected').forEach(el => {
+                el.className = 'FilterSelect__itemContent';
+            });
+            document.querySelectorAll('.CheckBox__selected').forEach(el => {
+                el.className = 'CheckBox__base';
+            });
+            document.querySelectorAll('.ColourSelectPLP__textHolderActive').forEach(el => {
+                el.className = 'ColourSelectPLP__textHolder';
+            });
+            log('All selections cleared');
+        }
+
+        async function testGetFilters() {
+            clearOutput();
+            log('Testing TataCliq filter extraction...');
+            
+            try {
+                // Simulate the getTataCliqFilters function
+                const filters = {
+                    brands: [],
+                    sizes: [],
+                    colors: []
+                };
+
+                // Extract brands
+                const selectedBrandFilters = document.querySelectorAll('.FilterSelect__item .FilterSelect__contentSelected');
+                for (const brandFilter of selectedBrandFilters) {
+                    const brandName = brandFilter.querySelector('.FilterSelect__data')?.textContent.trim();
+                    if (brandName && !filters.brands.includes(brandName)) {
+                        const parentSection = brandFilter.closest('.FilterDesktop__newFilterBlock');
+                        const sectionHeader = parentSection?.querySelector('.Accordion__headText')?.textContent.trim();
+                        
+                        if (sectionHeader && sectionHeader.toLowerCase().includes('brand')) {
+                            filters.brands.push(brandName);
+                            log(`Found brand: ${brandName}`);
+                        } else if (sectionHeader && sectionHeader.toLowerCase().includes('size')) {
+                            if (brandName && (brandName.includes('UK/IND') || brandName.includes('EURO') || /^\d+(\.\d+)?$/.test(brandName))) {
+                                if (!filters.sizes.includes(brandName)) {
+                                    filters.sizes.push(brandName);
+                                    log(`Found size: ${brandName}`);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Extract colors
+                const colorFilters = document.querySelectorAll('.ColourSelectPLP__base');
+                for (const colorFilter of colorFilters) {
+                    const isSelected = colorFilter.querySelector('.ColourSelectPLP__textHolderActive');
+                    if (isSelected) {
+                        const colorId = colorFilter.id;
+                        if (colorId && colorId.startsWith('filter-color-')) {
+                            const colorName = colorId.replace('filter-color-', '');
+                            if (colorName && !filters.colors.includes(colorName)) {
+                                filters.colors.push(colorName);
+                                log(`Found color: ${colorName}`);
+                            }
+                        }
+                    }
+                }
+
+                log('Extraction complete!');
+                log(`Results: ${JSON.stringify(filters, null, 2)}`);
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        }
+
+        async function testApplyFilters() {
+            clearOutput();
+            log('Testing filter application...');
+            
+            const testFilters = {
+                brands: ['Puma'],
+                sizes: ['UK/IND 9'],
+                colors: ['white', 'red']
+            };
+            
+            log(`Applying test filters: ${JSON.stringify(testFilters, null, 2)}`);
+            
+            // Apply brand filters
+            for (const brand of testFilters.brands) {
+                const brandItems = document.querySelectorAll('.FilterSelect__item');
+                for (const item of brandItems) {
+                    const brandText = item.querySelector('.FilterSelect__data')?.textContent.trim();
+                    if (brandText && brandText.toLowerCase() === brand.toLowerCase()) {
+                        const contentDiv = item.querySelector('.FilterSelect__itemContent, .FilterSelect__contentSelected');
+                        const checkbox = item.querySelector('.CheckBox__base');
+                        
+                        if (contentDiv && !contentDiv.classList.contains('FilterSelect__contentSelected')) {
+                            contentDiv.className = 'FilterSelect__contentSelected';
+                            checkbox.className = 'CheckBox__selected CheckBox__base';
+                            log(`Applied brand filter: ${brand}`);
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // Apply color filters
+            for (const color of testFilters.colors) {
+                const colorElement = document.querySelector(`#filter-color-${color}`);
+                if (colorElement) {
+                    const textHolder = colorElement.querySelector('.ColourSelectPLP__textHolder, .ColourSelectPLP__textHolderActive');
+                    if (textHolder && !textHolder.classList.contains('ColourSelectPLP__textHolderActive')) {
+                        textHolder.className = 'ColourSelectPLP__textHolderActive';
+                        log(`Applied color filter: ${color}`);
+                    }
+                }
+            }
+            
+            log('Filter application test complete!');
+        }
+    </script>
+</body>
+</html> 

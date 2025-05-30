@@ -4,8 +4,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
   const url = new URL(tab.url);
 
   if (!url.hostname.includes('ajio.com') && !url.hostname.includes('myntra.com') && 
-      !url.hostname.includes('amazon.in') && !url.hostname.includes('flipkart.com')) {
-    showMessage("This extension only works on AJIO, Myntra, Amazon, or Flipkart.", true);
+      !url.hostname.includes('amazon.in') && !url.hostname.includes('flipkart.com') &&
+      !url.hostname.includes('tatacliq.com')) {
+    showMessage("This extension only works on AJIO, Myntra, Amazon, Flipkart, and TataCliq.", true);
     return;
   }
 
@@ -289,7 +290,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     // Check if a hostname is compatible with our extension
     function isCompatibleSite(hostname) {
       return hostname.includes('ajio.com') || hostname.includes('myntra.com') || 
-             hostname.includes('amazon.in') || hostname.includes('flipkart.com');
+             hostname.includes('amazon.in') || hostname.includes('flipkart.com') ||
+             hostname.includes('tatacliq.com');
     }
     
     // Function to show filter selection UI - now accepts the filter container element
@@ -511,7 +513,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
         
         if (!isCompatibleSite(new URL(tab.url).hostname)) {
-          throw new Error('Please navigate to Ajio, Myntra, Amazon, or Flipkart first');
+          throw new Error('Please navigate to Ajio, Myntra, Amazon, Flipkart, or TataCliq first');
         }
 
         // Add origin site information
