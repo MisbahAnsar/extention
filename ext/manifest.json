@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "E-Commerce Filter Saver",
     "version": "1.0",
-    "description": "Save and reapply your favorite filters on Myntra, Ajio, Amazon, Flipkart, and TataCliq",
+    "description": "Save and reapply your favorite filters on Myntra, Ajio, Amazon, Flipkart, TataCliq, Luxury TataCliq, and Snapdeal",
     "action": {
       "default_popup": "popup.html",
       "default_icon": {
@@ -17,14 +17,16 @@
       "*://*.ajio.com/*",
       "*://*.amazon.in/*",
       "*://*.flipkart.com/*",
-      "*://*.tatacliq.com/*"
+      "*://*.tatacliq.com/*",
+      "*://luxury.tatacliq.com/*",
+      "*://*.snapdeal.com/*"
     ],
     "background": {
       "service_worker": "background.js"
     },
     "content_scripts": [
       {
-        "matches": ["*://*.myntra.com/*", "*://*.ajio.com/*", "*://*.amazon.in/*", "*://*.flipkart.com/*", "*://*.tatacliq.com/*"],
+        "matches": ["*://*.myntra.com/*", "*://*.ajio.com/*", "*://*.amazon.in/*", "*://*.flipkart.com/*", "*://*.tatacliq.com/*", "*://luxury.tatacliq.com/*", "*://*.snapdeal.com/*"],
         "js": ["contentScript.js"],
         "run_at": "document_end"
       }
