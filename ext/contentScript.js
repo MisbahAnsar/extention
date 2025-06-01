@@ -78,7 +78,111 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     
     return true;
   }
+  else if (request.action === "showToast") {
+    console.log("[Content Script] Showing toast:", request.message);
+    showWebpageToast(request.message, request.type, request.duration);
+    sendResponse({success: true});
+    return true;
+  }
 });
+
+// Toast notification system for webpage
+function showWebpageToast(message, type = 'success', duration = 3000) {
+  // Remove any existing toast
+  const existingToast = document.querySelector('.filter-saver-webpage-toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  // Create toast element
+  const toast = document.createElement('div');
+  toast.className = 'filter-saver-webpage-toast';
+  
+  toast.innerHTML = `
+    <div class="filter-saver-toast-content">
+      <span class="filter-saver-toast-message">${message}</span>
+    </div>
+  `;
+  
+  // Add toast styles based on type
+  const backgroundColor = type === 'error' ? '#fee2e2' : type === 'delete' ? '#fef3c7' : '#d1fae5';
+  const textColor = type === 'error' ? '#dc2626' : type === 'delete' ? '#d97706' : '#065f46';
+  const borderColor = type === 'error' ? '#fecaca' : type === 'delete' ? '#fed7aa' : '#a7f3d0';
+  const accentColor = type === 'error' ? '#dc2626' : type === 'delete' ? '#d97706' : '#10b981';
+  
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: ${backgroundColor};
+    color: ${textColor};
+    border: 2px solid ${borderColor};
+    border-left: 4px solid ${accentColor};
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 999999;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    max-width: 350px;
+    word-wrap: break-word;
+    animation: filterSaverSlideIn 0.3s ease-out forwards;
+    opacity: 0;
+    transform: translateX(100%);
+  `;
+  
+  // Add CSS animation keyframes if not already added
+  if (!document.querySelector('#filter-saver-toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'filter-saver-toast-styles';
+    style.textContent = `
+      @keyframes filterSaverSlideIn {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      @keyframes filterSaverSlideOut {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+      }
+      .filter-saver-toast-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .filter-saver-toast-message {
+        flex: 1;
+        line-height: 1.4;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // Add to document
+  document.body.appendChild(toast);
+  
+  // Remove toast after duration
+  setTimeout(() => {
+    toast.style.animation = 'filterSaverSlideOut 0.3s ease-in forwards';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 300);
+  }, duration);
+}
 
 // Amazon.in-specific functions
 async function getAmazonFilters() {
